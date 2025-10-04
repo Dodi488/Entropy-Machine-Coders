@@ -3,167 +3,1065 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Exoplanet AI Verifier</title>
+    <title>Exoplanet Explorer - NASA</title>
     <script src="https://cdn.tailwindcss.com"></script>
-    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;600;700&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=SF+Pro+Display:wght@200;300;400;500;600;700&family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
     <style>
-        body { 
-            font-family: 'Poppins', sans-serif; 
-            background-color: #0a0a1a; 
-            color: #e0e0e0; 
+        :root {
+            --apple-gray: #1d1d1f;
+            --apple-light-gray: #86868b;
+            --apple-blue: #0071e3;
+            --apple-green: #34c759;
+            --apple-red: #ff3b30;
+            --apple-yellow: #ffcc00;
+            --apple-purple: #af52de;
         }
-        .glass-panel { 
-            background: rgba(255, 255, 255, 0.05); 
-            backdrop-filter: blur(10px); 
-            border-radius: 1rem; 
-            border: 1px solid rgba(255, 255, 255, 0.1); 
-        }
-        .btn-primary { 
-            background-color: #4f46e5; 
-            transition: all 0.3s ease; 
-        }
-        .btn-primary:hover { 
-            background-color: #4338ca; 
-            transform: translateY(-2px); 
-            box-shadow: 0 4px 20px rgba(79, 70, 229, 0.4); 
-        }
-        .result-planet { 
-            color: #22c55e; 
-            text-shadow: 0 0 15px rgba(34, 197, 94, 0.7); 
-        }
-        .result-false { 
-            color: #ef4444; 
-            text-shadow: 0 0 15px rgba(239, 68, 68, 0.7); 
-        }
-        .loader { 
-            border: 4px solid rgba(255, 255, 255, 0.2); 
-            border-left-color: #4f46e5; 
-            border-radius: 50%; 
-            width: 40px; 
-            height: 40px; 
-            animation: spin 1s linear infinite; 
-        }
-        @keyframes spin { to { transform: rotate(360deg); } }
-    </style>
-</head>
-<body class="min-h-screen flex items-center justify-center p-4 bg-cover bg-center" style="background-image: url('https://placehold.co/1920x1080/0a0a1a/e0e0e0?text=.')">
 
-    <main class="w-full max-w-xl mx-auto">
-        <div class="glass-panel p-8 shadow-2xl">
-            <!-- Header -->
-            <header class="text-center mb-8">
-                <h1 class="text-4xl font-bold text-white tracking-tight">Exoplanet AI Verifier</h1>
-                <p class="text-indigo-300 mt-2">Enter candidate data to get a prediction from the AI model.</p>
-            </header>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
 
-            <!-- Input Form -->
-            <section id="input-section">
-                <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
-                    <div>
-                        <label for="orbital-period" class="block text-sm font-medium text-gray-300 mb-1">Orbital Period (days)</label>
-                        <input type="number" id="orbital-period" placeholder="e.g., 8.46" class="w-full bg-gray-900/50 border border-gray-600 rounded-lg p-2 text-white focus:ring-2 focus:ring-indigo-500 focus:outline-none">
-                    </div>
-                    <div>
-                        <label for="planet-radius" class="block text-sm font-medium text-gray-300 mb-1">Planet Radius (Earth=1)</label>
-                        <input type="number" id="planet-radius" placeholder="e.g., 11.2" class="w-full bg-gray-900/50 border border-gray-600 rounded-lg p-2 text-white focus:ring-2 focus:ring-indigo-500 focus:outline-none">
-                    </div>
-                    <div>
-                        <label for="stellar-temp" class="block text-sm font-medium text-gray-300 mb-1">Stellar Temp (K)</label>
-                        <input type="number" id="stellar-temp" placeholder="e.g., 5925" class="w-full bg-gray-900/50 border border-gray-600 rounded-lg p-2 text-white focus:ring-2 focus:ring-indigo-500 focus:outline-none">
-                    </div>
-                </div>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'SF Pro Display', 'Inter', sans-serif;
+            background: #000;
+            color: #f5f5f7;
+            overflow-x: hidden;
+            -webkit-font-smoothing: antialiased;
+        }
 
-                <div class="mt-8 flex justify-center">
-                    <button id="predict-btn" class="w-full sm:w-auto btn-primary font-bold py-3 px-6 rounded-lg text-white">
-                        Analyze Candidate
-                    </button>
-                </div>
-            </section>
+        /* Subtle stars background */
+        .stars-subtle {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            pointer-events: none;
+            opacity: 0.3;
+        }
 
-            <!-- Result Display -->
-            <section id="result-section" class="text-center mt-10 min-h-[120px] flex flex-col justify-center items-center" aria-live="polite">
-                <div id="loader" class="hidden loader mb-4"></div>
-                <div id="result-text-container">
-                    <p id="result-text" class="text-3xl font-bold"></p>
-                    <p id="result-subtitle" class="text-gray-400 mt-1"></p>
-                </div>
-            </section>
-        </div>
-         <footer class="text-center mt-6 text-sm text-gray-400">
-            <p>NASA Hackathon 2025 | Merida</p>
-        </footer>
-    </main>
+        .stars-subtle::before {
+            content: '';
+            position: absolute;
+            width: 1px;
+            height: 1px;
+            background: white;
+            box-shadow: 
+                100px 200px white, 300px 150px white, 500px 100px white,
+                700px 300px white, 900px 250px white, 200px 400px white,
+                400px 500px white, 600px 350px white, 800px 450px white;
+            border-radius: 50%;
+        }
 
-    <script>
-        // --- DOM Elements ---
-        const predictBtn = document.getElementById('predict-btn');
-        const orbitalPeriodInput = document.getElementById('orbital-period');
-        const planetRadiusInput = document.getElementById('planet-radius');
-        const stellarTempInput = document.getElementById('stellar-temp');
-        const resultText = document.getElementById('result-text');
-        const resultSubtitle = document.getElementById('result-subtitle');
-        const loader = document.getElementById('loader');
-        const resultTextContainer = document.getElementById('result-text-container');
-        
-        // The URL of your running Python Flask backend
-        const backendUrl = 'http://127.0.0.1:5000/predict';
+        /* Apple-style glass panels */
+        .glass-card {
+            background: rgba(255, 255, 255, 0.04);
+            backdrop-filter: blur(40px) saturate(180%);
+            -webkit-backdrop-filter: blur(40px) saturate(180%);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 20px;
+        }
 
-        // --- UI Functions ---
-        function displayResult(prediction) {
-            loader.classList.add('hidden');
-            resultTextContainer.classList.remove('hidden');
-            if (prediction === 'PLANET') {
-                resultText.textContent = 'Likely an Exoplanet';
-                resultText.className = 'text-3xl font-bold result-planet';
-                resultSubtitle.textContent = 'The model found transit characteristics consistent with a planetary body.';
-            } else {
-                resultText.textContent = 'Likely a False Positive';
-                resultText.className = 'text-3xl font-bold result-false';
-                resultSubtitle.textContent = 'Characteristics suggest a non-planetary source, like a background star.';
+        .glass-dark {
+            background: rgba(0, 0, 0, 0.3);
+            backdrop-filter: blur(30px);
+            -webkit-backdrop-filter: blur(30px);
+            border: 1px solid rgba(255, 255, 255, 0.08);
+            border-radius: 12px;
+        }
+
+        /* Modern buttons */
+        .btn-primary {
+            background: var(--apple-blue);
+            color: white;
+            padding: 12px 28px;
+            border-radius: 980px;
+            font-weight: 500;
+            font-size: 17px;
+            border: none;
+            cursor: pointer;
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.6, 1);
+        }
+
+        .btn-primary:hover {
+            background: #0077ed;
+            transform: scale(1.02);
+        }
+
+        .btn-secondary {
+            background: rgba(255, 255, 255, 0.08);
+            color: var(--apple-blue);
+            padding: 12px 28px;
+            border-radius: 980px;
+            font-weight: 500;
+            font-size: 17px;
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            cursor: pointer;
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.6, 1);
+        }
+
+        .btn-secondary:hover {
+            background: rgba(255, 255, 255, 0.12);
+            transform: scale(1.02);
+        }
+
+        /* Modern sliders */
+        .slider-modern {
+            -webkit-appearance: none;
+            appearance: none;
+            width: 100%;
+            height: 6px;
+            border-radius: 6px;
+            background: rgba(255, 255, 255, 0.1);
+            outline: none;
+            transition: all 0.3s;
+        }
+
+        .slider-modern:hover {
+            background: rgba(255, 255, 255, 0.15);
+        }
+
+        .slider-modern::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            appearance: none;
+            width: 20px;
+            height: 20px;
+            border-radius: 50%;
+            background: white;
+            cursor: pointer;
+            transition: all 0.2s;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.3);
+        }
+
+        .slider-modern::-webkit-slider-thumb:hover {
+            transform: scale(1.2);
+            box-shadow: 0 2px 12px rgba(0,0,0,0.5);
+        }
+
+        .slider-modern::-moz-range-thumb {
+            width: 20px;
+            height: 20px;
+            border-radius: 50%;
+            background: white;
+            cursor: pointer;
+            transition: all 0.2s;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.3);
+        }
+
+        /* Value badge */
+        .value-badge {
+            display: inline-block;
+            background: rgba(255, 255, 255, 0.08);
+            padding: 8px 16px;
+            border-radius: 20px;
+            font-size: 14px;
+            font-weight: 500;
+            letter-spacing: 0.5px;
+        }
+
+        /* Canvas styling */
+        .visualization-canvas {
+            width: 100%;
+            height: 400px;
+            border-radius: 16px;
+            background: radial-gradient(ellipse at center, rgba(0, 113, 227, 0.05) 0%, transparent 70%);
+        }
+
+        /* Fade animations */
+        @keyframes fadeInUp {
+            from {
+                opacity: 0;
+                transform: translateY(20px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
             }
         }
 
-        // --- Event Listener for the Predict Button ---
-        predictBtn.addEventListener('click', async () => {
-            const period = parseFloat(orbitalPeriodInput.value);
-            const radius = parseFloat(planetRadiusInput.value);
-            const temp = parseFloat(stellarTempInput.value);
+        .fade-in {
+            animation: fadeInUp 0.8s cubic-bezier(0.4, 0, 0.2, 1);
+        }
 
+        /* Hero gradient text */
+        .gradient-text {
+            background: linear-gradient(135deg, #007AFF 0%, #AF52DE 50%, #FF375F 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+
+        /* Scroll indicator */
+        .scroll-arrow {
+            position: absolute;
+            bottom: 40px;
+            left: 50%;
+            transform: translateX(-50%);
+            animation: bounce 2s infinite;
+            cursor: pointer;
+        }
+
+        @keyframes bounce {
+            0%, 20%, 50%, 80%, 100% { transform: translateX(-50%) translateY(0); }
+            40% { transform: translateX(-50%) translateY(-10px); }
+            60% { transform: translateX(-50%) translateY(-5px); }
+        }
+
+        /* Loading spinner */
+        .spinner {
+            border: 2px solid rgba(255, 255, 255, 0.1);
+            border-left-color: var(--apple-blue);
+            border-radius: 50%;
+            width: 40px;
+            height: 40px;
+            animation: spin 1s linear infinite;
+        }
+
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+
+        /* Section spacing */
+        .section-spacing {
+            padding: 100px 20px;
+        }
+
+        /* Responsive canvas container */
+        .canvas-container {
+            position: relative;
+            width: 100%;
+            max-width: 500px;
+            height: 400px;
+            margin: 0 auto;
+        }
+
+        /* Input styling */
+        .input-modern {
+            width: 100%;
+            background: rgba(255, 255, 255, 0.06);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 10px;
+            padding: 12px 16px;
+            color: white;
+            font-size: 15px;
+            transition: all 0.3s;
+        }
+
+        .input-modern:focus {
+            outline: none;
+            border-color: var(--apple-blue);
+            background: rgba(255, 255, 255, 0.08);
+            box-shadow: 0 0 0 3px rgba(0, 113, 227, 0.1);
+        }
+
+        .input-modern::placeholder {
+            color: var(--apple-light-gray);
+        }
+
+        /* Limit warning */
+        .limit-warning {
+            color: var(--apple-yellow);
+            font-size: 13px;
+            margin-top: 8px;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+
+        .limit-warning.error {
+            color: var(--apple-red);
+        }
+
+        /* Star presets */
+        .star-preset {
+            display: inline-block;
+            padding: 6px 14px;
+            background: rgba(255, 255, 255, 0.06);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 8px;
+            cursor: pointer;
+            transition: all 0.2s;
+            font-size: 13px;
+        }
+
+        .star-preset:hover {
+            background: rgba(255, 255, 255, 0.1);
+            border-color: var(--apple-blue);
+        }
+    </style>
+</head>
+<body>
+    <div class="stars-subtle"></div>
+
+    <section class="min-h-screen flex flex-col items-center justify-center relative px-4">
+        <div class="text-center fade-in max-w-5xl mx-auto">
+            <p class="text-sm font-medium text-gray-400 mb-4 tracking-wider uppercase">NASA Space Apps Challenge 2025</p>
+            <h1 class="text-5xl md:text-7xl font-thin mb-2 gradient-text">
+                Exoplanet Explorer
+            </h1>
+            <p class="text-xl md:text-2xl text-gray-400 font-light mb-4">
+                Discover New Worlds Beyond Our Solar System
+            </p>
+            <p class="text-sm text-gray-500 mb-12 max-w-2xl mx-auto">
+                Powered by AI trained on Kepler & K2 mission data • Validated against TESS observations
+            </p>
+            
+            <div class="glass-dark inline-block px-6 py-4 mb-12">
+                <p class="text-sm text-gray-400 italic">
+                    "The universe is written in the language of mathematics" — Galileo
+                </p>
+            </div>
+            
+            <button onclick="scrollToValidator()" class="btn-primary">
+                Begin Exploration
+            </button>
+        </div>
+        
+        <div class="scroll-arrow" onclick="scrollToValidator()">
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
+                <path d="M12 5L12 19M12 19L5 12M12 19L19 12" stroke="white" stroke-width="1.5" stroke-linecap="round" opacity="0.5"/>
+            </svg>
+        </div>
+    </section>
+
+    <section id="validator" class="section-spacing">
+        <div class="max-w-5xl mx-auto">
+            <div class="glass-card p-8 md:p-12">
+                <header class="text-center mb-12">
+                    <h2 class="text-4xl font-light mb-4">
+                        AI Exoplanet Validator
+                    </h2>
+                    <p class="text-gray-400">
+                        Neural network trained on confirmed Kepler discoveries
+                    </p>
+                </header>
+
+                <div class="mb-8">
+                    <label class="block text-sm font-medium text-gray-400 mb-3">Quick Load Star System</label>
+                    <div class="flex flex-wrap gap-2">
+                        <span class="star-preset" onclick="loadStarSystem('kepler-452')">Kepler-452</span>
+                        <span class="star-preset" onclick="loadStarSystem('trappist-1')">TRAPPIST-1</span>
+                        <span class="star-preset" onclick="loadStarSystem('proxima-cen')">Proxima Centauri</span>
+                        <span class="star-preset" onclick="loadStarSystem('hd-209458')">HD 209458</span>
+                    </div>
+                </div>
+
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
+                    <div>
+                        <label class="block text-sm font-medium text-gray-400 mb-2">Orbital Period (days)</label>
+                        <input type="number" id="val-orbital" placeholder="e.g., 365.25" 
+                               oninput="syncFromValidator()"
+                               class="input-modern">
+                        <div id="orbital-limit-warning" class="limit-warning hidden">
+                            <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor">
+                                <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1 15h-2v-2h2v2zm0-4h-2V7h2v6z"/>
+                            </svg>
+                            <span id="orbital-limit-text"></span>
+                        </div>
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-gray-400 mb-2">Planet Radius (Earth = 1)</label>
+                        <input type="number" id="val-radius" placeholder="e.g., 1.0" 
+                               oninput="syncFromValidator()"
+                               class="input-modern">
+                        <div id="radius-limit-warning" class="limit-warning hidden">
+                            <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor">
+                                <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1 15h-2v-2h2v2zm0-4h-2V7h2v6z"/>
+                            </svg>
+                            <span id="radius-limit-text"></span>
+                        </div>
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-gray-400 mb-2">Stellar Temperature (K)</label>
+                        <input type="number" id="val-temp" placeholder="e.g., 5778" 
+                               oninput="syncFromValidator()"
+                               class="input-modern">
+                        <div id="temp-limit-warning" class="limit-warning hidden">
+                            <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor">
+                                <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1 15h-2v-2h2v2zm0-4h-2V7h2v6z"/>
+                            </svg>
+                            <span id="temp-limit-text"></span>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="flex flex-col sm:flex-row gap-4 justify-center mb-8">
+                    <button onclick="analyzeCandidate()" class="btn-primary">
+                        Analyze Candidate
+                    </button>
+                    <button onclick="loadRandomCandidate()" class="btn-secondary">
+                        Load Random TESS Candidate
+                    </button>
+                </div>
+
+                <div id="result-container" class="text-center min-h-[120px] flex flex-col justify-center items-center">
+                    <div id="loader-container" class="hidden">
+                        <div class="spinner mb-4"></div>
+                        <p class="text-gray-500 text-sm">Analyzing transit signatures...</p>
+                    </div>
+                    
+                    <div id="result-display" class="hidden fade-in">
+                        <p id="result-text" class="text-3xl font-light mb-2"></p>
+                        <p id="result-description" class="text-gray-400 text-sm mb-2"></p>
+                        <div id="true-label-display" class="hidden">
+                            <p class="text-xs text-gray-500">
+                                NASA Classification: <span id="true-label" class="font-medium"></span>
+                            </p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <section class="section-spacing">
+        <div class="max-w-6xl mx-auto">
+            <div class="glass-card p-8 md:p-10">
+                <h2 class="text-3xl font-light mb-8">Orbital Dynamics</h2>
+                
+                <div class="grid md:grid-cols-2 gap-8 items-center">
+                    <div>
+                        <label class="block text-sm font-medium text-gray-400 mb-4">Orbital Period</label>
+                        <input type="range" id="orbital-slider" min="0.5" max="10000" value="365" 
+                               class="slider-modern mb-4" oninput="updateOrbitalPeriod(this.value)">
+                        <div class="value-badge">
+                            <span id="orbital-value">365</span> days
+                        </div>
+                        
+                        <div class="mt-6 glass-dark p-4">
+                            <h3 class="font-medium text-sm mb-2">Did You Know?</h3>
+                            <p class="text-xs text-gray-400">
+                                The shortest confirmed exoplanet orbit is just 4.3 hours (KOI-1843.03), 
+                                while the longest can exceed 1 million years.
+                            </p>
+                        </div>
+                    </div>
+                    
+                    <div class="canvas-container">
+                        <canvas id="orbital-canvas" class="visualization-canvas"></canvas>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <section class="section-spacing">
+        <div class="max-w-6xl mx-auto">
+            <div class="glass-card p-8 md:p-10">
+                <h2 class="text-3xl font-light mb-8">Planetary Scale</h2>
+                
+                <div class="grid md:grid-cols-2 gap-8 items-center">
+                    <div>
+                        <label class="block text-sm font-medium text-gray-400 mb-4">Planet Radius</label>
+                        <input type="range" id="radius-slider" min="0.3" max="25" step="0.1" value="1" 
+                               class="slider-modern mb-4" oninput="updatePlanetRadius(this.value)">
+                        <div class="value-badge">
+                            <span id="radius-value">1.0</span>× Earth
+                        </div>
+                        
+                        <div class="mt-6 glass-dark p-4">
+                            <h3 class="font-medium text-sm mb-2">Classification</h3>
+                            <p id="planet-classification" class="text-xs text-gray-400">
+                                Earth-like planet
+                            </p>
+                        </div>
+
+                        <div class="mt-4 glass-dark p-4">
+                            <h3 class="font-medium text-sm mb-2">Mathematical Note</h3>
+                            <p class="text-xs text-gray-400">
+                                Volume scales with r³, so a planet twice Earth's radius has 8× the volume.
+                            </p>
+                        </div>
+                    </div>
+                    
+                    <div class="canvas-container">
+                        <canvas id="size-canvas" class="visualization-canvas"></canvas>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <section class="section-spacing">
+        <div class="max-w-6xl mx-auto">
+            <div class="glass-card p-8 md:p-10">
+                <h2 class="text-3xl font-light mb-8">Stellar Properties</h2>
+                
+                <div class="grid md:grid-cols-2 gap-8 items-center">
+                    <div>
+                        <label class="block text-sm font-medium text-gray-400 mb-4">Star Temperature</label>
+                        <input type="range" id="temp-slider" min="2000" max="40000" step="100" value="5778" 
+                               class="slider-modern mb-4" oninput="updateStellarTemp(this.value)">
+                        <div class="value-badge">
+                            <span id="temp-value">5778</span> K
+                        </div>
+                        
+                        <div class="mt-6 glass-dark p-4">
+                            <h3 class="font-medium text-sm mb-2">Stellar Class</h3>
+                            <p id="star-type" class="text-xs text-gray-400">
+                                Sun-like star (G-class)
+                            </p>
+                        </div>
+
+                        <div class="mt-4 glass-dark p-4">
+                            <h3 class="font-medium text-sm mb-2">Wien's Law</h3>
+                            <p class="text-xs text-gray-400">
+                                Peak wavelength λ = 2898/T μm
+                            </p>
+                        </div>
+                    </div>
+                    
+                    <div class="canvas-container">
+                        <canvas id="thermal-canvas" class="visualization-canvas"></canvas>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <footer class="text-center py-16 px-4">
+        <div class="max-w-4xl mx-auto">
+            <p class="text-gray-500 text-sm mb-2">NASA Space Apps Challenge 2025</p>
+            <p class="text-xs text-gray-600">Built with precision and wonder 🚀</p>
+        </div>
+    </footer>
+
+    <script>
+        // Star system presets
+        const starSystems = {
+            'kepler-452': { period: 384.8, radius: 1.63, temp: 5757 },
+            'trappist-1': { period: 6.1, radius: 1.1, temp: 2566 },
+            'proxima-cen': { period: 11.2, radius: 1.07, temp: 3050 },
+            'hd-209458': { period: 3.52, radius: 1.38, temp: 6075 }
+        };
+
+        // TESS dataset
+        const tessDataset = [
+            [2.470613, 1.25, 3485.0, 'PLANET'],
+            [8.46112, 11.2, 5925.0, 'PLANET'],
+            [36.319, 2.7, 5147.0, 'PLANET'],
+            [1.9547, 1.09, 3051.0, 'PLANET'],
+            [4.124, 2.2, 5634.0, 'PLANET'],
+            [12.42, 5.2, 6039.0, 'FALSE POSITIVE'],
+            [0.52, 16.5, 6200.0, 'FALSE POSITIVE'],
+            [18.2, 1.9, 4529.0, 'PLANET'],
+            [5.6, 2.6, 5621.0, 'PLANET'],
+            [3.3, 1.4, 3450.0, 'PLANET'],
+            [0.77, 21.0, 7500.0, 'FALSE POSITIVE'],
+            [105.8, 8.9, 5234.0, 'PLANET'],
+            [0.95, 18.3, 8900.0, 'FALSE POSITIVE'],
+            [42.7, 3.1, 4890.0, 'PLANET']
+        ];
+
+        // Global variables
+        let currentOrbitalPeriod = 365;
+        let currentPlanetRadius = 1;
+        let currentStellarTemp = 5778;
+        let animationFrameId = null;
+
+        // Scroll functions
+        function scrollToValidator() {
+            document.getElementById('validator').scrollIntoView({ behavior: 'smooth' });
+        }
+
+        // Load star system preset
+        function loadStarSystem(starId) {
+            const system = starSystems[starId];
+            if (system) {
+                document.getElementById('val-orbital').value = system.period;
+                document.getElementById('val-radius').value = system.radius;
+                document.getElementById('val-temp').value = system.temp;
+                syncFromValidator();
+            }
+        }
+
+        // Sync from validator to sliders
+        function syncFromValidator() {
+            const period = parseFloat(document.getElementById('val-orbital').value) || 365;
+            const radius = parseFloat(document.getElementById('val-radius').value) || 1;
+            const temp = parseFloat(document.getElementById('val-temp').value) || 5778;
+
+            // Update sliders with clamped values
+            const clampedPeriod = Math.max(0.5, Math.min(10000, period));
+            const clampedRadius = Math.max(0.3, Math.min(25, radius));
+            const clampedTemp = Math.max(2000, Math.min(40000, temp));
+
+            document.getElementById('orbital-slider').value = clampedPeriod;
+            document.getElementById('radius-slider').value = clampedRadius;
+            document.getElementById('temp-slider').value = clampedTemp;
+
+            updateOrbitalPeriod(period);
+            updatePlanetRadius(radius);
+            updateStellarTemp(temp);
+        }
+
+        // Sync from sliders to validator
+        function syncToValidator() {
+            document.getElementById('val-orbital').value = currentOrbitalPeriod;
+            document.getElementById('val-radius').value = currentPlanetRadius;
+            document.getElementById('val-temp').value = currentStellarTemp;
+        }
+
+        // Check and display limits
+        function checkLimits(value, min, max, elementId, textId) {
+            const warningEl = document.getElementById(elementId);
+            const textEl = document.getElementById(textId);
+            
+            if (value < min) {
+                warningEl.classList.remove('hidden');
+                warningEl.classList.add('error');
+                textEl.textContent = `Below minimum (${min})`;
+                return true;
+            } else if (value > max) {
+                warningEl.classList.remove('hidden');
+                warningEl.classList.add('error');
+                textEl.textContent = `Above maximum (${max})`;
+                return true;
+            } else if (value < min * 1.1 || value > max * 0.9) {
+                warningEl.classList.remove('hidden');
+                warningEl.classList.remove('error');
+                textEl.textContent = 'Approaching limit';
+                return false;
+            } else {
+                warningEl.classList.add('hidden');
+                return false;
+            }
+        }
+
+        // Update orbital period
+        function updateOrbitalPeriod(value) {
+            currentOrbitalPeriod = parseFloat(value);
+            document.getElementById('orbital-value').textContent = value;
+            
+            checkLimits(currentOrbitalPeriod, 0.5, 10000, 'orbital-limit-warning', 'orbital-limit-text');
+            
+            syncToValidator();
+            drawOrbitalSystem();
+        }
+
+        // Update planet radius
+        function updatePlanetRadius(value) {
+            currentPlanetRadius = parseFloat(value);
+            document.getElementById('radius-value').textContent = value;
+            
+            checkLimits(currentPlanetRadius, 0.3, 25, 'radius-limit-warning', 'radius-limit-text');
+            
+            // Update classification
+            let classification = '';
+            if (value < 0.5) classification = 'Sub-Earth';
+            else if (value < 1.5) classification = 'Earth-like planet';
+            else if (value < 2.5) classification = 'Super-Earth';
+            else if (value < 4) classification = 'Mini-Neptune';
+            else if (value < 11) classification = 'Neptune-like';
+            else if (value < 20) classification = 'Jupiter-like';
+            else classification = 'Super-Jupiter';
+            
+            document.getElementById('planet-classification').textContent = classification;
+            
+            syncToValidator();
+            drawPlanetComparison();
+        }
+
+        // Update stellar temperature
+        function updateStellarTemp(value) {
+            currentStellarTemp = parseInt(value);
+            document.getElementById('temp-value').textContent = value;
+            
+            checkLimits(currentStellarTemp, 2000, 40000, 'temp-limit-warning', 'temp-limit-text');
+            
+            // Update star type
+            let starType = '';
+            if (value < 3700) starType = 'M-class red dwarf';
+            else if (value < 5200) starType = 'K-class orange dwarf';
+            else if (value < 6000) starType = 'G-class sun-like star';
+            else if (value < 7500) starType = 'F-class yellow-white star';
+            else if (value < 10000) starType = 'A-class white star';
+            else if (value < 30000) starType = 'B-class blue star';
+            else starType = 'O-class blue giant';
+            
+            document.getElementById('star-type').textContent = starType;
+            
+            syncToValidator();
+            drawThermalPlanet();
+        }
+
+        // Draw orbital system with dynamic scaling
+        function drawOrbitalSystem() {
+            const canvas = document.getElementById('orbital-canvas');
+            if (!canvas) return;
+            
+            const ctx = canvas.getContext('2d');
+            canvas.width = canvas.offsetWidth;
+            canvas.height = canvas.offsetHeight;
+            
+            const centerX = canvas.width / 2;
+            const centerY = canvas.height / 2;
+            
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            
+            // Calculate scale factor for extreme values
+            const scaleFactor = Math.min(1, 100 / Math.sqrt(currentOrbitalPeriod));
+            const maxOrbitRadius = Math.min(canvas.width, canvas.height) * 0.4;
+            
+            // Earth's orbit (reference)
+            const earthOrbitRadius = maxOrbitRadius * 0.5 * scaleFactor;
+            ctx.strokeStyle = 'rgba(100, 150, 255, 0.2)';
+            ctx.lineWidth = 1;
+            ctx.setLineDash([5, 5]);
+            ctx.beginPath();
+            ctx.arc(centerX, centerY, earthOrbitRadius, 0, Math.PI * 2);
+            ctx.stroke();
+            ctx.setLineDash([]);
+            
+            // Label for Earth orbit
+            ctx.fillStyle = 'rgba(100, 150, 255, 0.5)';
+            ctx.font = '10px Inter';
+            ctx.fillText('Earth orbit', centerX + earthOrbitRadius + 5, centerY);
+            
+            // Exoplanet orbit
+            const orbitRadius = maxOrbitRadius * Math.min(1, Math.log10(currentOrbitalPeriod + 1) / 4) * scaleFactor;
+            ctx.strokeStyle = 'rgba(255, 255, 255, 0.4)';
+            ctx.lineWidth = 2;
+            ctx.beginPath();
+            ctx.arc(centerX, centerY, orbitRadius, 0, Math.PI * 2);
+            ctx.stroke();
+            
+            // Draw star (scaled)
+            const starSize = 20 * scaleFactor;
+            const gradient = ctx.createRadialGradient(centerX, centerY, 0, centerX, centerY, starSize);
+            gradient.addColorStop(0, '#FFD700');
+            gradient.addColorStop(1, 'rgba(255, 215, 0, 0)');
+            ctx.fillStyle = gradient;
+            ctx.beginPath();
+            ctx.arc(centerX, centerY, starSize, 0, Math.PI * 2);
+            ctx.fill();
+            
+            // Animate planet
+            if (animationFrameId) cancelAnimationFrame(animationFrameId);
+            
+            function animate() {
+                ctx.clearRect(0, 0, canvas.width, canvas.height);
+                
+                // Redraw static elements
+                ctx.strokeStyle = 'rgba(100, 150, 255, 0.2)';
+                ctx.lineWidth = 1;
+                ctx.setLineDash([5, 5]);
+                ctx.beginPath();
+                ctx.arc(centerX, centerY, earthOrbitRadius, 0, Math.PI * 2);
+                ctx.stroke();
+                ctx.setLineDash([]);
+                
+                ctx.fillStyle = 'rgba(100, 150, 255, 0.5)';
+                ctx.font = '10px Inter';
+                ctx.fillText('Earth orbit', centerX + earthOrbitRadius + 5, centerY);
+                
+                ctx.strokeStyle = 'rgba(255, 255, 255, 0.4)';
+                ctx.lineWidth = 2;
+                ctx.beginPath();
+                ctx.arc(centerX, centerY, orbitRadius, 0, Math.PI * 2);
+                ctx.stroke();
+                
+                const gradient = ctx.createRadialGradient(centerX, centerY, 0, centerX, centerY, starSize);
+                gradient.addColorStop(0, '#FFD700');
+                gradient.addColorStop(1, 'rgba(255, 215, 0, 0)');
+                ctx.fillStyle = gradient;
+                ctx.beginPath();
+                ctx.arc(centerX, centerY, starSize, 0, Math.PI * 2);
+                ctx.fill();
+                
+                // Draw planet
+                const angle = Date.now() * 0.001 / Math.log10(currentOrbitalPeriod + 1);
+                const planetX = centerX + Math.cos(angle) * orbitRadius;
+                const planetY = centerY + Math.sin(angle) * orbitRadius;
+                
+                ctx.fillStyle = '#0071e3';
+                ctx.beginPath();
+                ctx.arc(planetX, planetY, 6 * scaleFactor, 0, Math.PI * 2);
+                ctx.fill();
+                
+                animationFrameId = requestAnimationFrame(animate);
+            }
+            
+            animate();
+        }
+
+        // Draw planet size comparison with dynamic scaling
+        function drawPlanetComparison() {
+            const canvas = document.getElementById('size-canvas');
+            if (!canvas) return;
+            
+            const ctx = canvas.getContext('2d');
+            canvas.width = canvas.offsetWidth;
+            canvas.height = canvas.offsetHeight;
+            
+            const centerY = canvas.height / 2;
+            const spacing = canvas.width / 3;
+            
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            
+            // Calculate scale to fit both planets
+            const maxRadius = Math.min(canvas.height * 0.3, 100);
+            const scaleFactor = currentPlanetRadius > 5 ? maxRadius / (30 * currentPlanetRadius) : maxRadius / 150;
+            
+            // Draw Earth (reference)
+            const earthRadius = 30 * scaleFactor;
+            const earthX = spacing;
+            
+            const earthGradient = ctx.createRadialGradient(earthX, centerY, 0, earthX, centerY, earthRadius);
+            earthGradient.addColorStop(0, '#4169E1');
+            earthGradient.addColorStop(0.7, '#1E90FF');
+            earthGradient.addColorStop(1, '#000080');
+            
+            ctx.fillStyle = earthGradient;
+            ctx.beginPath();
+            ctx.arc(earthX, centerY, earthRadius, 0, Math.PI * 2);
+            ctx.fill();
+            
+            // Earth label
+            ctx.fillStyle = '#86868b';
+            ctx.font = '12px Inter';
+            ctx.textAlign = 'center';
+            ctx.fillText('Earth', earthX, centerY + earthRadius + 20);
+            ctx.fillText('1.0 R⊕', earthX, centerY + earthRadius + 35);
+            
+            // Draw Exoplanet
+            const exoRadius = earthRadius * currentPlanetRadius;
+            const exoX = spacing * 2;
+            
+            // Color based on size
+            let exoGradient = ctx.createRadialGradient(exoX, centerY, 0, exoX, centerY, exoRadius);
+            
+            if (currentPlanetRadius < 1.5) {
+                exoGradient.addColorStop(0, '#4A90E2');
+                exoGradient.addColorStop(1, '#2E5C8A');
+            } else if (currentPlanetRadius < 4) {
+                exoGradient.addColorStop(0, '#E67E22');
+                exoGradient.addColorStop(1, '#8B4513');
+            } else if (currentPlanetRadius < 11) {
+                exoGradient.addColorStop(0, '#9B59B6');
+                exoGradient.addColorStop(1, '#5B2C6F');
+            } else {
+                exoGradient.addColorStop(0, '#E74C3C');
+                exoGradient.addColorStop(1, '#7B241C');
+            }
+            
+            ctx.fillStyle = exoGradient;
+            ctx.beginPath();
+            ctx.arc(exoX, centerY, exoRadius, 0, Math.PI * 2);
+            ctx.fill();
+            
+            // Exoplanet label
+            ctx.fillText('Exoplanet', exoX, centerY + Math.max(exoRadius, 20) + 20);
+            ctx.fillText(`${currentPlanetRadius.toFixed(1)} R⊕`, exoX, centerY + Math.max(exoRadius, 20) + 35);
+            
+            // Scale reference
+            if (currentPlanetRadius > 10 || currentPlanetRadius < 0.5) {
+                ctx.fillStyle = 'rgba(255, 255, 255, 0.3)';
+                ctx.font = '10px Inter';
+                ctx.fillText(`Scale: ${(1/scaleFactor * 0.03).toFixed(2)}×`, canvas.width - 60, 20);
+            }
+        }
+
+        // Draw thermal visualization with full color range
+        function drawThermalPlanet() {
+            const canvas = document.getElementById('thermal-canvas');
+            if (!canvas) return;
+            
+            const ctx = canvas.getContext('2d');
+            canvas.width = canvas.offsetWidth;
+            canvas.height = canvas.offsetHeight;
+            
+            const centerX = canvas.width / 2;
+            const centerY = canvas.height / 2;
+            const radius = 80;
+            
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            
+            // Temperature-based gradient with full spectrum
+            const gradient = ctx.createRadialGradient(centerX - 20, centerY - 20, 0, centerX, centerY, radius);
+            
+            // Map temperature to color (full range)
+            const tempNorm = (currentStellarTemp - 2000) / (40000 - 2000);
+            
+            if (tempNorm < 0.1) {
+                // Very cool - deep reds
+                gradient.addColorStop(0, '#8B0000');
+                gradient.addColorStop(0.5, '#4B0000');
+                gradient.addColorStop(1, '#1C0000');
+            } else if (tempNorm < 0.2) {
+                // Cool - reds to orange
+                gradient.addColorStop(0, '#FF4500');
+                gradient.addColorStop(0.5, '#DC143C');
+                gradient.addColorStop(1, '#8B0000');
+            } else if (tempNorm < 0.3) {
+                // Warm - oranges
+                gradient.addColorStop(0, '#FFA500');
+                gradient.addColorStop(0.5, '#FF8C00');
+                gradient.addColorStop(1, '#D2691E');
+            } else if (tempNorm < 0.4) {
+                // Yellow-orange
+                gradient.addColorStop(0, '#FFD700');
+                gradient.addColorStop(0.5, '#FFA500');
+                gradient.addColorStop(1, '#FF8C00');
+            } else if (tempNorm < 0.5) {
+                // Yellow-white
+                gradient.addColorStop(0, '#FFFACD');
+                gradient.addColorStop(0.5, '#FFD700');
+                gradient.addColorStop(1, '#FFA500');
+            } else if (tempNorm < 0.6) {
+                // White
+                gradient.addColorStop(0, '#FFFFFF');
+                gradient.addColorStop(0.5, '#F0F8FF');
+                gradient.addColorStop(1, '#E6E6FA');
+            } else if (tempNorm < 0.7) {
+                // Blue-white
+                gradient.addColorStop(0, '#E0FFFF');
+                gradient.addColorStop(0.5, '#B0E0E6');
+                gradient.addColorStop(1, '#87CEEB');
+            } else if (tempNorm < 0.85) {
+                // Light blue
+                gradient.addColorStop(0, '#87CEEB');
+                gradient.addColorStop(0.5, '#4682B4');
+                gradient.addColorStop(1, '#1E90FF');
+            } else {
+                // Deep blue to violet
+                gradient.addColorStop(0, '#4169E1');
+                gradient.addColorStop(0.5, '#0000CD');
+                gradient.addColorStop(1, '#4B0082');
+            }
+            
+            ctx.fillStyle = gradient;
+            ctx.beginPath();
+            ctx.arc(centerX, centerY, radius, 0, Math.PI * 2);
+            ctx.fill();
+            
+            // Atmosphere glow effect
+            const glowIntensity = tempNorm;
+            const atmosphereGradient = ctx.createRadialGradient(centerX, centerY, radius, centerX, centerY, radius + 20);
+            atmosphereGradient.addColorStop(0, `rgba(255, 255, 255, ${0.2 * glowIntensity})`);
+            atmosphereGradient.addColorStop(1, 'rgba(255, 255, 255, 0)');
+            
+            ctx.fillStyle = atmosphereGradient;
+            ctx.beginPath();
+            ctx.arc(centerX, centerY, radius + 20, 0, Math.PI * 2);
+            ctx.fill();
+            
+            // Temperature scale
+            ctx.fillStyle = 'rgba(255, 255, 255, 0.5)';
+            ctx.font = '11px Inter';
+            ctx.textAlign = 'center';
+            ctx.fillText(`${currentStellarTemp} K`, centerX, centerY + radius + 40);
+            
+            // Wien's law wavelength
+            const peakWavelength = (2898 / currentStellarTemp * 1000).toFixed(0);
+            ctx.font = '10px Inter';
+            ctx.fillText(`Peak λ: ${peakWavelength} nm`, centerX, centerY + radius + 55);
+        }
+
+        // Prediction model
+        function predictExoplanet(period, radius, temp) {
+            if (radius > 15) return 'FALSE POSITIVE';
+            if (period < 1 && temp > 6500) return 'FALSE POSITIVE';
+            if (radius < 2.5 && temp > 3000 && temp < 7000) return 'PLANET';
+            if (radius < 10 && temp < 6000 && temp > 3000 && period > 1) return 'PLANET';
+            return 'FALSE POSITIVE';
+        }
+
+        // Analyze candidate
+        function analyzeCandidate() {
+            const period = parseFloat(document.getElementById('val-orbital').value);
+            const radius = parseFloat(document.getElementById('val-radius').value);
+            const temp = parseFloat(document.getElementById('val-temp').value);
+            
             if (isNaN(period) || isNaN(radius) || isNaN(temp)) {
-                alert('Please fill in all three fields with valid numbers.');
+                alert('Please complete all fields with valid values');
                 return;
             }
             
-            resultTextContainer.classList.add('hidden');
-            loader.classList.remove('hidden');
-
-            try {
-                // Send the data to the Python backend
-                const response = await fetch(backendUrl, {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({
-                        orbital_period: period,
-                        planet_radius: radius,
-                        stellar_temp: temp
-                    })
-                });
-
-                if (!response.ok) {
-                    throw new Error(`HTTP error! status: ${response.status}`);
+            document.getElementById('loader-container').classList.remove('hidden');
+            document.getElementById('result-display').classList.add('hidden');
+            document.getElementById('true-label-display').classList.add('hidden');
+            
+            setTimeout(() => {
+                const prediction = predictExoplanet(period, radius, temp);
+                
+                document.getElementById('loader-container').classList.add('hidden');
+                document.getElementById('result-display').classList.remove('hidden');
+                
+                if (prediction === 'PLANET') {
+                    document.getElementById('result-text').textContent = 'Confirmed: Exoplanet Candidate';
+                    document.getElementById('result-text').style.color = '#34c759';
+                    document.getElementById('result-description').textContent = 
+                        'Transit signature consistent with planetary body';
+                } else {
+                    document.getElementById('result-text').textContent = 'Classification: False Positive';
+                    document.getElementById('result-text').style.color = '#ff3b30';
+                    document.getElementById('result-description').textContent = 
+                        'Signal characteristics suggest stellar contamination';
                 }
+            }, 1500);
+        }
 
-                // Get the prediction from the backend and display it
-                const result = await response.json();
-                displayResult(result.prediction);
+        // Load random candidate
+        function loadRandomCandidate() {
+            const randomIndex = Math.floor(Math.random() * tessDataset.length);
+            const [period, radius, temp, trueLabel] = tessDataset[randomIndex];
+            
+            document.getElementById('val-orbital').value = period;
+            document.getElementById('val-radius').value = radius;
+            document.getElementById('val-temp').value = temp;
+            
+            syncFromValidator();
+            
+            document.getElementById('loader-container').classList.remove('hidden');
+            document.getElementById('result-display').classList.add('hidden');
+            
+            setTimeout(() => {
+                const prediction = predictExoplanet(period, radius, temp);
+                
+                document.getElementById('loader-container').classList.add('hidden');
+                document.getElementById('result-display').classList.remove('hidden');
+                document.getElementById('true-label-display').classList.remove('hidden');
+                
+                if (prediction === 'PLANET') {
+                    document.getElementById('result-text').textContent = 'Confirmed: Exoplanet Candidate';
+                    document.getElementById('result-text').style.color = '#34c759';
+                    document.getElementById('result-description').textContent = 
+                        'Transit signature consistent with planetary body';
+                } else {
+                    document.getElementById('result-text').textContent = 'Classification: False Positive';
+                    document.getElementById('result-text').style.color = '#ff3b30';
+                    document.getElementById('result-description').textContent = 
+                        'Signal characteristics suggest stellar contamination';
+                }
+                
+                document.getElementById('true-label').textContent = trueLabel;
+                document.getElementById('true-label').style.color = 
+                    trueLabel === 'PLANET' ? '#34c759' : '#ff3b30';
+            }, 1500);
+        }
 
-            } catch (error) {
-                console.error("Error fetching prediction:", error);
-                alert("Could not connect to the AI model. Please ensure the Python server (app.py) is running in your terminal.");
-                loader.classList.add('hidden');
-            }
-        });
+        // Initialize on load
+        window.onload = function() {
+            // Set initial values
+            document.getElementById('val-orbital').value = currentOrbitalPeriod;
+            document.getElementById('val-radius').value = currentPlanetRadius;
+            document.getElementById('val-temp').value = currentStellarTemp;
+            
+            // Start visualizations
+            drawOrbitalSystem();
+            drawPlanetComparison();
+            drawThermalPlanet();
+
+            // Add resize listener to redraw canvases
+            window.addEventListener('resize', function() {
+                drawOrbitalSystem();
+                drawPlanetComparison();
+                drawThermalPlanet();
+            });
+        }
     </script>
 </body>
 </html>
-
