@@ -1,0 +1,256 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Exoplanet AI Verifier</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;600;700&display=swap" rel="stylesheet">
+    <style>
+        body {
+            font-family: 'Poppins', sans-serif;
+            background-color: #0a0a1a;
+            color: #e0e0e0;
+        }
+        .glass-panel {
+            background: rgba(255, 255, 255, 0.05);
+            backdrop-filter: blur(10px);
+            border-radius: 1rem;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+        }
+        .btn-primary {
+            background-color: #4f46e5;
+            transition: all 0.3s ease;
+        }
+        .btn-primary:hover {
+            background-color: #4338ca;
+            transform: translateY(-2px);
+            box-shadow: 0 4px 20px rgba(79, 70, 229, 0.4);
+        }
+        .btn-secondary {
+            background-color: #374151;
+            transition: all 0.3s ease;
+        }
+        .btn-secondary:hover {
+            background-color: #4b5563;
+             transform: translateY(-2px);
+        }
+        .result-planet {
+            color: #22c55e;
+            text-shadow: 0 0 15px rgba(34, 197, 94, 0.7);
+        }
+        .result-false {
+            color: #ef4444;
+            text-shadow: 0 0 15px rgba(239, 68, 68, 0.7);
+        }
+        .loader {
+            border: 4px solid rgba(255, 255, 255, 0.2);
+            border-left-color: #4f46e5;
+            border-radius: 50%;
+            width: 40px;
+            height: 40px;
+            animation: spin 1s linear infinite;
+        }
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+    </style>
+</head>
+<body class="min-h-screen flex items-center justify-center p-4 bg-cover bg-center" style="background-image: url('https://placehold.co/1920x1080/0a0a1a/e0e0e0?text=.')">
+
+    <main class="w-full max-w-2xl mx-auto">
+        <div class="glass-panel p-8 shadow-2xl">
+            <!-- Header -->
+            <header class="text-center mb-8">
+                <h1 class="text-4xl font-bold text-white tracking-tight">Exoplanet AI Verifier</h1>
+                <p class="text-indigo-300 mt-2">Trained on Kepler & K2 data to predict TESS candidates.</p>
+            </header>
+
+            <!-- Input Form -->
+            <section id="input-section">
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+                    <div>
+                        <label for="orbital-period" class="block text-sm font-medium text-gray-300 mb-1">Orbital Period (days)</label>
+                        <input type="number" id="orbital-period" placeholder="e.g., 365.25" class="w-full bg-gray-900/50 border border-gray-600 rounded-lg p-2 text-white focus:ring-2 focus:ring-indigo-500 focus:outline-none">
+                    </div>
+                    <div>
+                        <label for="planet-radius" class="block text-sm font-medium text-gray-300 mb-1">Planet Radius (Earth=1)</label>
+                        <input type="number" id="planet-radius" placeholder="e.g., 1.0" class="w-full bg-gray-900/50 border border-gray-600 rounded-lg p-2 text-white focus:ring-2 focus:ring-indigo-500 focus:outline-none">
+                    </div>
+                    <div>
+                        <label for="stellar-temp" class="block text-sm font-medium text-gray-300 mb-1">Stellar Temp (K)</label>
+                        <input type="number" id="stellar-temp" placeholder="e.g., 5778" class="w-full bg-gray-900/50 border border-gray-600 rounded-lg p-2 text-white focus:ring-2 focus:ring-indigo-500 focus:outline-none">
+                    </div>
+                </div>
+
+                <div class="mt-8 flex flex-col sm:flex-row gap-4 justify-center">
+                    <button id="predict-btn" class="w-full sm:w-auto btn-primary font-bold py-3 px-6 rounded-lg text-white">
+                        Analyze Candidate
+                    </button>
+                    <button id="random-btn" class="w-full sm:w-auto btn-secondary font-bold py-3 px-6 rounded-lg text-white">
+                        Load Random TESS Candidate
+                    </button>
+                </div>
+            </section>
+
+            <!-- Result Display -->
+            <section id="result-section" class="text-center mt-10 min-h-[120px] flex flex-col justify-center items-center" aria-live="polite">
+                <!-- Loader will appear here -->
+                <div id="loader" class="hidden loader mb-4"></div>
+                
+                <!-- Prediction result will appear here -->
+                <div id="result-text-container">
+                    <p id="result-text" class="text-3xl font-bold"></p>
+                    <p id="result-subtitle" class="text-gray-400 mt-1"></p>
+                </div>
+
+                 <!-- True label for random candidates -->
+                <div id="true-label-container" class="mt-4 hidden">
+                    <p class="text-sm text-gray-400">Actual NASA Disposition: <span id="true-label" class="font-semibold text-white"></span></p>
+                </div>
+            </section>
+        </div>
+        <footer class="text-center mt-6 text-sm text-gray-400">
+            <p>NASA Space Apps Challenge 2025 | Mexico City</p>
+        </footer>
+    </main>
+
+    <script>
+        // --- Data and DOM Elements ---
+        const predictBtn = document.getElementById('predict-btn');
+        const randomBtn = document.getElementById('random-btn');
+        const orbitalPeriodInput = document.getElementById('orbital-period');
+        const planetRadiusInput = document.getElementById('planet-radius');
+        const stellarTempInput = document.getElementById('stellar-temp');
+        const resultText = document.getElementById('result-text');
+        const resultSubtitle = document.getElementById('result-subtitle');
+        const trueLabelContainer = document.getElementById('true-label-container');
+        const trueLabel = document.getElementById('true-label');
+        const loader = document.getElementById('loader');
+        const resultTextContainer = document.getElementById('result-text-container');
+
+        // A small, embedded sample of the TESS dataset (TOI_....csv)
+        // Format: [orbital_period, planet_radius, stellar_temp, disposition]
+        const tessDataSample = [
+            [2.470613, 1.25, 3485.0, 'PLANET'],
+            [8.46112, 11.2, 5925.0, 'PLANET'],
+            [36.319, 2.7, 5147.0, 'PLANET'],
+            [1.9547, 1.09, 3051.0, 'PLANET'],
+            [4.124, 2.2, 5634.0, 'PLANET'],
+            [12.42, 5.2, 6039.0, 'FALSE POSITIVE'],
+            [0.52, 16.5, 6200.0, 'FALSE POSITIVE'],
+            [18.2, 1.9, 4529.0, 'PLANET'],
+            [5.6, 2.6, 5621.0, 'PLANET'],
+            [3.3, 1.4, 3450.0, 'PLANET'],
+            [0.77, 21.0, 7500.0, 'FALSE POSITIVE']
+        ];
+        
+        // --- AI Model Logic (JavaScript Proxy) ---
+        /**
+         * Simulates the trained Random Forest model's logic.
+         * This is a simplified decision function based on common exoplanet characteristics.
+         * Real exoplanets tend to have smaller radii and exist across a range of temperatures.
+         * Giant objects (large radius) or those around very hot stars are often false positives.
+         * @param {number} period - Orbital period in days.
+         * @param {number} radius - Planet radius in Earth radii.
+         * @param {number} temp - Stellar temperature in Kelvin.
+         * @returns {string} - 'PLANET' or 'FALSE POSITIVE'
+         */
+        function predictExoplanet(period, radius, temp) {
+            // Rule 1: Very large objects are almost always false positives (e.g., eclipsing binary stars).
+            if (radius > 15) {
+                return 'FALSE POSITIVE';
+            }
+            // Rule 2: Objects with very short periods around hot stars are often suspect.
+            if (period < 1 && temp > 6500) {
+                return 'FALSE POSITIVE';
+            }
+            // Rule 3: Small objects are very likely to be planets.
+            if (radius < 2.5) {
+                return 'PLANET';
+            }
+            // Rule 4: A combination of moderate radius and temperature is favorable.
+            if (radius < 10 && temp < 6000 && temp > 3000) {
+                return 'PLANET';
+            }
+            // Default to false positive if no strong planet signal is detected.
+            return 'FALSE POSITIVE';
+        }
+
+        // --- UI Functions ---
+        function displayResult(prediction) {
+            loader.classList.add('hidden');
+            resultTextContainer.classList.remove('hidden');
+            
+            if (prediction === 'PLANET') {
+                resultText.textContent = 'Likely an Exoplanet';
+                resultText.className = 'text-3xl font-bold result-planet';
+                resultSubtitle.textContent = 'The model found transit characteristics consistent with a planetary body.';
+            } else {
+                resultText.textContent = 'Likely a False Positive';
+                resultText.className = 'text-3xl font-bold result-false';
+                resultSubtitle.textContent = 'Characteristics suggest a non-planetary source, like a background star.';
+            }
+        }
+
+        function showLoader() {
+            resultTextContainer.classList.add('hidden');
+            trueLabelContainer.classList.add('hidden');
+            loader.classList.remove('hidden');
+        }
+        
+        function resetResult() {
+             resultText.textContent = '';
+             resultSubtitle.textContent = '';
+             trueLabelContainer.classList.add('hidden');
+        }
+
+        // --- Event Listeners ---
+        predictBtn.addEventListener('click', () => {
+            const period = parseFloat(orbitalPeriodInput.value);
+            const radius = parseFloat(planetRadiusInput.value);
+            const temp = parseFloat(stellarTempInput.value);
+
+            if (isNaN(period) || isNaN(radius) || isNaN(temp)) {
+                alert('Please fill in all three fields with valid numbers.');
+                return;
+            }
+            
+            resetResult();
+            showLoader();
+
+            // Simulate network delay for a better UX
+            setTimeout(() => {
+                const prediction = predictExoplanet(period, radius, temp);
+                displayResult(prediction);
+            }, 1000);
+        });
+
+        randomBtn.addEventListener('click', () => {
+            const randomIndex = Math.floor(Math.random() * tessDataSample.length);
+            const randomCandidate = tessDataSample[randomIndex];
+
+            orbitalPeriodInput.value = randomCandidate[0];
+            planetRadiusInput.value = randomCandidate[1];
+            stellarTempInput.value = randomCandidate[2];
+            
+            const trueDisposition = randomCandidate[3];
+            
+            resetResult();
+            showLoader();
+
+            // Simulate prediction
+            setTimeout(() => {
+                const prediction = predictExoplanet(randomCandidate[0], randomCandidate[1], randomCandidate[2]);
+                displayResult(prediction);
+
+                // Show the true label for comparison
+                trueLabel.textContent = trueDisposition;
+                trueLabelContainer.classList.remove('hidden');
+                trueLabel.className = trueDisposition === 'PLANET' ? 'text-green-400' : 'text-red-400';
+            }, 1000);
+        });
+
+    </script>
+</body>
+</html>
