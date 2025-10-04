@@ -2,30 +2,21 @@
 import pandas as pd
 from sklearn.ensemble import RandomForestClassifier
 from sklearn.preprocessing import MinMaxScaler, LabelEncoder
-from sklearn.metrics import accuracy_score, confusion_matrix, classification_report
-import matplotlib.pyplot as plt
-import seaborn as sns
+from sklearn.metrics import accuracy_score, classification_report
 
 # --- Step 2: Load the Training and Testing Datasets ---
 print("Loading datasets...")
-# The fused Kepler+K2 data is our training set
 train_df = pd.read_csv('./fused_kepler_k2_data.csv')
-# The TESS data is our test set
 test_df_raw = pd.read_csv('./raw_data/TOI_2025.10.04_08.55.28.csv', comment='#')
 print("Datasets loaded successfully.")
 
 
 # --- Step 3: Prepare the Training Data ---
 print("Preparing training data...")
-# Separate features from labels in the training set
 X_train = train_df.drop(['star_id', 'disposition', 'source'], axis=1)
 y_train_labels = train_df['disposition']
-
-# Encode the text labels ('PLANET', 'FALSE POSITIVE') into numbers (1, 0)
 le = LabelEncoder()
 y_train = le.fit_transform(y_train_labels)
-
-# Scale the training features to a range between 0 and 1
 scaler = MinMaxScaler()
 X_train_scaled = scaler.fit_transform(X_train)
 
@@ -37,9 +28,8 @@ model.fit(X_train_scaled, y_train)
 print("Model training complete.")
 
 
-# --- Step 5: Preprocess the TESS Data for Testing ---
-print("Preprocessing TESS data for testing...")
-# Apply the exact same preprocessing steps as before
+# --- Step 5: Preprocess the TESS Data for Use ---
+print("Preprocessing TESS data...")
 test_df = test_df_raw[['tid', 'pl_orbper', 'pl_rade', 'st_teff', 'tfopwg_disp']].copy()
 test_df.rename(columns={
     'tid': 'star_id',
@@ -48,50 +38,72 @@ test_df.rename(columns={
     'st_teff': 'stellar_temp',
     'tfopwg_disp': 'disposition'
 }, inplace=True)
-
-# Drop rows with missing values to ensure the test set is clean
 test_df.dropna(inplace=True)
-
-# Standardize the disposition labels
 test_df['disposition'] = test_df['disposition'].apply(lambda x: 'PLANET' if x in ['CP', 'PC'] else 'FALSE POSITIVE')
 
 
-# --- Step 6: Prepare the TESS Test Data ---
-# Separate the features from the true labels
+# --- Step 6: Prepare the TESS Features ---
+# We keep the features and true labels separate for our examples
 X_test = test_df.drop(['star_id', 'disposition'], axis=1)
 y_test_labels = test_df['disposition']
 
-# IMPORTANT: Use the SAME encoder and scaler that were fitted on the training data
-# This ensures the data is transformed in the exact same way.
-y_test = le.transform(y_test_labels)
+
+# --- (Optional) Step 7: Full Evaluation on TESS data ---
+print("\n--- Full Evaluation on TESS Data ---")
 X_test_scaled = scaler.transform(X_test)
-
-
-# --- Step 7: Make Predictions and Evaluate the Model on TESS Data ---
-print("\n--- Evaluating Model on Unseen TESS Data ---")
-
-# Use the trained model to make predictions
+y_test = le.transform(y_test_labels)
 y_pred = model.predict(X_test_scaled)
-print("Checar el y_pred")
-print(y_pred)
-
-# Calculate accuracy
 accuracy = accuracy_score(y_test, y_pred)
-print(f"Model Accuracy on TESS data: {accuracy * 100:.2f}%")
+print(f"Overall Model Accuracy on TESS data: {accuracy * 100:.2f}%")
+print(classification_report(y_test, y_pred, target_names=le.classes_))
 
-# Print a detailed classification report
-print("\nClassification Report:")
-target_names = le.classes_
-print(classification_report(y_test, y_pred, target_names=target_names))
 
-# Display a confusion matrix to visualize performance
-print("\nConfusion Matrix:")
-cm = confusion_matrix(y_test, y_pred)
+# --- Step 8: Function to Check an Individual Row ---
+print("\n--- Individual Exoplanet Prediction ---")
 
-# Plot the confusion matrix for a clear visual
-plt.figure(figsize=(8, 6))
-sns.heatmap(cm, annot=True, fmt='d', cmap='Blues', xticklabels=target_names, yticklabels=target_names)
-plt.xlabel('Predicted Label')
-plt.ylabel('True Label')
-plt.title('Model Performance on TESS Dataset')
-plt.show()
+def check_exoplanet(row_data):
+    """
+    Takes a single row of data (as a pandas Series or DataFrame),
+    processes it, and predicts if it's an exoplanet.
+    """
+    # Ensure the input is a DataFrame with the correct feature names
+    if isinstance(row_data, pd.Series):
+        row_data = row_data.to_frame().T
+    
+    # 1. Scale the data using the already-fitted scaler
+    row_scaled = scaler.transform(row_data)
+    
+    # 2. Make a prediction (returns [0] or [1])
+    prediction_encoded = model.predict(row_scaled)
+    
+    # 3. Decode the prediction back to 'PLANET' or 'FALSE POSITIVE'
+    prediction_decoded = le.inverse_transform(prediction_encoded)
+    
+    # 4. Return the result
+    return prediction_decoded[0]
+
+# --- Example Usage ---
+
+# Example 1: Let's test the 5th object from our TESS dataset
+print("Checking a sample row from TESS...")
+sample_row_features = X_test.iloc[[5]]
+true_label = y_test_labels.iloc[5]
+
+prediction = check_exoplanet(sample_row_features)
+
+print(f"Data for object being checked:\n{sample_row_features}")
+print(f"\nModel Prediction: '{prediction}'")
+print(f"Actual Label:     '{true_label}'")
+
+print("-" * 30)
+
+# Example 2: Let's test the 20th object
+print("\nChecking another sample row...")
+sample_row_features_2 = X_test.iloc[[20]]
+true_label_2 = y_test_labels.iloc[20]
+
+prediction_2 = check_exoplanet(sample_row_features_2)
+
+print(f"Data for object being checked:\n{sample_row_features_2}")
+print(f"\nModel Prediction: '{prediction_2}'")
+print(f"Actual Label:     '{true_label_2}'")
