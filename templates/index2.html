@@ -1,0 +1,352 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Exoplanet AI Verifier + Visual Generator</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;600;700&display=swap" rel="stylesheet">
+  <style>
+    body{font-family:'Poppins',sans-serif;background:#0a0a1a;color:#e0e0e0}
+    .glass{background:rgba(255,255,255,.05);backdrop-filter:blur(10px);border-radius:1rem;border:1px solid rgba(255,255,255,.1)}
+    .btn-primary{background:#4f46e5;transition:all .2s ease}
+    .btn-primary:hover{background:#4338ca;transform:translateY(-1px);box-shadow:0 4px 20px rgba(79,70,229,.35)}
+    .result-planet{color:#22c55e;text-shadow:0 0 15px rgba(34,197,94,.6)}
+    .result-false{color:#ef4444;text-shadow:0 0 15px rgba(239,68,68,.6)}
+    .loader{border:4px solid rgba(255,255,255,.2);border-left-color:#4f46e5;border-radius:50%;width:40px;height:40px;animation:spin 1s linear infinite}
+    @keyframes spin{to{transform:rotate(360deg)}}
+    .kbd{border:1px solid rgba(255,255,255,.15);border-bottom-width:3px;border-radius:.5rem;padding:.2rem .45rem;background:rgba(255,255,255,.04)}
+    textarea[readonly]{cursor:text}
+    .img-skeleton{background:linear-gradient(90deg, rgba(255,255,255,.06), rgba(255,255,255,.02), rgba(255,255,255,.06));background-size:200% 100%;animation:skeleton 1.2s ease-in-out infinite}
+    @keyframes skeleton{0%{background-position:200% 0}100%{background-position:-200% 0}}
+  </style>
+</head>
+<body class="min-h-screen p-4">
+  <main class="max-w-6xl mx-auto">
+    <header class="text-center mb-6">
+      <h1 class="text-4xl font-bold tracking-tight">Exoplanet AI Verifier</h1>
+      <p class="text-indigo-300 mt-1">Predicción del modelo + Generación visual coherente entre variables.</p>
+    </header>
+
+    <!-- PANEL SUPERIOR: FORM + ACCIONES -->
+    <section class="glass p-6 md:p-8">
+      <div class="grid grid-cols-1 md:grid-cols-4 gap-6">
+        <div>
+          <label for="orbital-period" class="block text-sm mb-1 text-gray-300">Orbital Period (days)</label>
+          <input type="number" id="orbital-period" placeholder="e.g., 8.46" class="w-full bg-gray-900/50 border border-gray-600 rounded-lg p-2 text-white focus:ring-2 focus:ring-indigo-500 focus:outline-none">
+        </div>
+        <div>
+          <label for="planet-radius" class="block text-sm mb-1 text-gray-300">Planet Radius (Earth=1)</label>
+          <input type="number" id="planet-radius" placeholder="e.g., 1.8" class="w-full bg-gray-900/50 border border-gray-600 rounded-lg p-2 text-white focus:ring-2 focus:ring-indigo-500 focus:outline-none">
+        </div>
+        <div>
+          <label for="stellar-temp" class="block text-sm mb-1 text-gray-300">Stellar Temp (K)</label>
+          <input type="number" id="stellar-temp" placeholder="e.g., 5925" class="w-full bg-gray-900/50 border border-gray-600 rounded-lg p-2 text-white focus:ring-2 focus:ring-indigo-500 focus:outline-none">
+        </div>
+        <div class="flex md:block items-end">
+          <button id="analyze-btn" class="w-full btn-primary font-bold py-3 px-6 rounded-lg text-white">Analizar + Generar</button>
+        </div>
+      </div>
+
+      <!-- RESULTADOS DE PREDICCIÓN -->
+      <div class="mt-6 text-center min-h-[110px]" aria-live="polite">
+        <div id="loader" class="hidden loader mx-auto mb-3"></div>
+        <p id="result-text" class="text-2xl font-bold"></p>
+        <p id="result-subtitle" class="text-gray-400"></p>
+      </div>
+    </section>
+
+    <!-- PROMPTS (solo lectura + copiar) -->
+    <section class="mt-8 grid grid-cols-1 md:grid-cols-3 gap-6">
+      <div class="glass p-5">
+        <div class="flex items-center justify-between mb-3">
+          <h3 class="text-lg font-semibold">Prompt: Orbital Period</h3>
+          <button data-copy="#prompt-orbital" class="copy-btn text-sm px-3 py-1 rounded-lg border border-gray-600">Copiar</button>
+        </div>
+        <textarea id="prompt-orbital" readonly class="w-full min-h-[120px] bg-gray-900/50 border border-gray-700 rounded-lg p-3 text-sm"></textarea>
+        <p class="text-xs mt-2 text-gray-400">Genera estrella + órbita artificial predictiva proporcional a <span class="kbd">days</span>.</p>
+      </div>
+
+      <div class="glass p-5">
+        <div class="flex items-center justify-between mb-3">
+          <h3 class="text-lg font-semibold">Prompt: Planet Radius</h3>
+          <button data-copy="#prompt-radius" class="copy-btn text-sm px-3 py-1 rounded-lg border border-gray-600">Copiar</button>
+        </div>
+        <textarea id="prompt-radius" readonly class="w-full min-h-[120px] bg-gray-900/50 border border-gray-700 rounded-lg p-3 text-sm"></textarea>
+        <p class="text-xs mt-2 text-gray-400">Mantén rasgos del planeta anterior; añade Tierra de referencia; escala por <span class="kbd">Planet Radius</span>.</p>
+      </div>
+
+      <div class="glass p-5">
+        <div class="flex items-center justify-between mb-3">
+          <h3 class="text-lg font-semibold">Prompt: Stellar Temp (K)</h3>
+          <button data-copy="#prompt-temp" class="copy-btn text-sm px-3 py-1 rounded-lg border border-gray-600">Copiar</button>
+        </div>
+        <textarea id="prompt-temp" readonly class="w-full min-h-[120px] bg-gray-900/50 border border-gray-700 rounded-lg p-3 text-sm"></textarea>
+        <p class="text-xs mt-2 text-gray-400">Conserva patrones previos; colorea por <span class="kbd">K</span> (alto=rojo, medio=amarillo/blanco, bajo=azul/verde).</p>
+      </div>
+    </section>
+
+    <!-- INPUT/OUTPUT POR CADA IMAGEN -->
+    <section id="images-section" class="mt-8 grid grid-cols-1 lg:grid-cols-3 gap-6">
+      <!-- Orbital Period Card -->
+      <div class="glass p-5">
+        <div class="flex items-center justify-between mb-3">
+          <h3 class="text-lg font-semibold">Orbital Period</h3>
+          <div class="flex gap-2">
+            <label class="text-xs text-gray-300 cursor-pointer">
+              <input type="file" id="file-orbital" accept="image/*" class="hidden">
+              <span class="px-3 py-1 border border-gray-600 rounded-lg">Subir guía</span>
+            </label>
+            <button id="download-orbital" class="text-xs px-3 py-1 rounded-lg border border-gray-600">Descargar</button>
+          </div>
+        </div>
+        <div class="aspect-square rounded-lg border border-gray-700 overflow-hidden">
+          <img id="img-orbital" class="w-full h-full object-cover img-skeleton" alt="Visual Orbital Period">
+        </div>
+        <p id="hint-orbital" class="text-xs text-gray-400 mt-2">Input: archivo opcional como guía visual. Output: imagen generada.</p>
+      </div>
+
+      <!-- Planet Radius Card -->
+      <div class="glass p-5">
+        <div class="flex items-center justify-between mb-3">
+          <h3 class="text-lg font-semibold">Planet Radius</h3>
+          <div class="flex gap-2">
+            <label class="text-xs text-gray-300 cursor-pointer">
+              <input type="file" id="file-radius" accept="image/*" class="hidden">
+              <span class="px-3 py-1 border border-gray-600 rounded-lg">Subir guía</span>
+            </label>
+            <button id="download-radius" class="text-xs px-3 py-1 rounded-lg border border-gray-600">Descargar</button>
+          </div>
+        </div>
+        <div class="aspect-square rounded-lg border border-gray-700 overflow-hidden">
+          <img id="img-radius" class="w-full h-full object-cover img-skeleton" alt="Visual Planet Radius">
+        </div>
+        <p id="hint-radius" class="text-xs text-gray-400 mt-2">Input: archivo opcional como guía visual. Output: imagen generada.</p>
+      </div>
+
+      <!-- Stellar Temp Card -->
+      <div class="glass p-5">
+        <div class="flex items-center justify-between mb-3">
+          <h3 class="text-lg font-semibold">Stellar Temp (K)</h3>
+          <div class="flex gap-2">
+            <label class="text-xs text-gray-300 cursor-pointer">
+              <input type="file" id="file-temp" accept="image/*" class="hidden">
+              <span class="px-3 py-1 border border-gray-600 rounded-lg">Subir guía</span>
+            </label>
+            <button id="download-temp" class="text-xs px-3 py-1 rounded-lg border border-gray-600">Descargar</button>
+          </div>
+        </div>
+        <div class="aspect-square rounded-lg border border-gray-700 overflow-hidden">
+          <img id="img-temp" class="w-full h-full object-cover img-skeleton" alt="Visual Stellar Temp">
+        </div>
+        <p id="hint-temp" class="text-xs text-gray-400 mt-2">Input: archivo opcional como guía visual. Output: imagen generada.</p>
+      </div>
+    </section>
+
+    <footer class="text-center mt-8 text-sm text-gray-400">NASA Hackathon 2025 | Mérida</footer>
+  </main>
+
+  <script>
+    // ---- ELEMENTOS ----
+    const analyzeBtn = document.getElementById('analyze-btn');
+    const loader = document.getElementById('loader');
+    const resultText = document.getElementById('result-text');
+    const resultSubtitle = document.getElementById('result-subtitle');
+
+    const orbitalInput = document.getElementById('orbital-period');
+    const radiusInput = document.getElementById('planet-radius');
+    const tempInput = document.getElementById('stellar-temp');
+
+    const promptOrbital = document.getElementById('prompt-orbital');
+    const promptRadius = document.getElementById('prompt-radius');
+    const promptTemp = document.getElementById('prompt-temp');
+    const copyButtons = document.querySelectorAll('.copy-btn');
+
+    const imgOrbital = document.getElementById('img-orbital');
+    const imgRadius = document.getElementById('img-radius');
+    const imgTemp = document.getElementById('img-temp');
+
+    const fileOrbital = document.getElementById('file-orbital');
+    const fileRadius = document.getElementById('file-radius');
+    const fileTemp = document.getElementById('file-temp');
+
+    const dlOrbital = document.getElementById('download-orbital');
+    const dlRadius = document.getElementById('download-radius');
+    const dlTemp = document.getElementById('download-temp');
+
+    // ---- CONFIG BACKEND ----
+    const PREDICT_URL = 'http://127.0.0.1:5000/predict';
+    const GENERATE_URL = 'http://127.0.0.1:5000/generate-image'; // Debe aceptar JSON o multipart/form-data
+
+    // ---- HELPERS ----
+    function buildPrompts(days, pr, k){
+      const p1 = `En base a un valor de ${days} días, genera una imagen de una estrella cuyo tamaño esté proporcionalmente relacionado con ${days}, mostrando una órbita artificial predictiva para representar el tamaño de 'Orbital Peripherical'. Fondo espacial oscuro y estilo realista.`;
+
+      const p2 = `En base a Planet Radius = ${pr}, crea un exoplaneta que conserve los rasgos visuales del planeta anterior (texturas/patrones), cambia su tamaño proporcionalmente y añade una Tierra de referencia al lado para comparar su tamaño. Mantén coherencia de color y luz.`;
+
+      const heat =
+        (k >= 7000) ? 'paleta predominantemente roja/anaranjada (muy caliente)' :
+        (k >= 5200) ? 'paleta amarilla o blanca (temperatura intermedia)' :
+        'paleta azulada o verdosa (baja temperatura)';
+      const p3 = `En base a K = ${k}, representa el exoplaneta correlacionado con el anterior (conserva texturas y forma), y ajusta los colores según la temperatura: ${heat}. Entorno espacial coherente.`;
+
+      return {p1,p2,p3};
+    }
+
+    function setPrompts(days, pr, k){
+      const {p1,p2,p3} = buildPrompts(days, pr, k);
+      promptOrbital.value = p1;
+      promptRadius.value = p2;
+      promptTemp.value   = p3;
+    }
+
+    async function copyToClipboard(selector){
+      const el = document.querySelector(selector);
+      if(!el) return;
+      await navigator.clipboard.writeText(el.value);
+      const btn = document.querySelector(`[data-copy="${selector}"]`);
+      if(btn){
+        const old = btn.textContent;
+        btn.textContent = 'Copiado ✓';
+        setTimeout(()=>btn.textContent = old, 1400);
+      }
+    }
+
+    copyButtons.forEach(b=>{
+      b.addEventListener('click', ()=> copyToClipboard(b.getAttribute('data-copy')));
+    });
+
+    function getFileAsBase64(file){
+      return new Promise((resolve,reject)=>{
+        const reader = new FileReader();
+        reader.onload = () => resolve(reader.result);
+        reader.onerror = reject;
+        reader.readAsDataURL(file);
+      });
+    }
+
+    function setSkeletonOn(imgEl, on=true){
+      imgEl.classList.toggle('img-skeleton', on);
+      if(on){ imgEl.removeAttribute('src'); }
+    }
+
+    function downloadImageFrom(imgEl, filename){
+      const src = imgEl.getAttribute('src');
+      if(!src) return;
+      const a = document.createElement('a');
+      a.href = src;
+      a.download = filename;
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+    }
+
+    dlOrbital.addEventListener('click', ()=> downloadImageFrom(imgOrbital, 'orbital_period.png'));
+    dlRadius.addEventListener('click',  ()=> downloadImageFrom(imgRadius,  'planet_radius.png'));
+    dlTemp.addEventListener('click',    ()=> downloadImageFrom(imgTemp,    'stellar_temp.png'));
+
+    // ---- FLUJO PRINCIPAL ----
+    analyzeBtn.addEventListener('click', async ()=>{
+      const days = parseFloat(orbitalInput.value);
+      const pr   = parseFloat(radiusInput.value);
+      const k    = parseFloat(tempInput.value);
+
+      if([days,pr,k].some(v=>isNaN(v))){
+        alert('Por favor completa los tres campos con números válidos.');
+        return;
+      }
+
+      // 1) Mostrar prompts calculados (para transparencia)
+      setPrompts(days, pr, k);
+
+      // 2) Mostrar loader para predicción
+      loader.classList.remove('hidden');
+      resultText.textContent = '';
+      resultSubtitle.textContent = '';
+
+      try{
+        // 3) Predicción
+        const predRes = await fetch(PREDICT_URL, {
+          method:'POST',
+          headers:{'Content-Type':'application/json'},
+          body:JSON.stringify({ orbital_period: days, planet_radius: pr, stellar_temp: k })
+        });
+        if(!predRes.ok) throw new Error('Error en /predict');
+        const pred = await predRes.json();
+        const label = (pred && pred.prediction) ? String(pred.prediction).toUpperCase() : 'UNKNOWN';
+        if(label.includes('PLANET')){
+          resultText.textContent = 'Probable Exoplaneta';
+          resultText.className = 'text-2xl font-bold result-planet';
+          resultSubtitle.textContent = 'El modelo encontró características de tránsito consistentes con un cuerpo planetario.';
+        }else{
+          resultText.textContent = 'Probable Falso Positivo';
+          resultText.className = 'text-2xl font-bold result-false';
+          resultSubtitle.textContent = 'Las características sugieren una fuente no planetaria (p. ej., una estrella de fondo).';
+        }
+      }catch(err){
+        console.error(err);
+        resultText.textContent = 'No se pudo obtener la predicción.';
+        resultText.className = 'text-2xl font-bold result-false';
+        resultSubtitle.textContent = 'Asegúrate de que el backend Flask está ejecutándose y accesible.';
+      }finally{
+        loader.classList.add('hidden');
+      }
+
+      // 4) Generación de imágenes
+      //    - Soportamos envío JSON con prompts y archivos guía opcionales en base64.
+      //    - El backend puede devolver { orbital_period_img, planet_radius_img, stellar_temp_img } como
+      //      dataURL (data:image/png;base64,...) o URLs servidas por Flask.
+      try{
+        setSkeletonOn(imgOrbital,true);
+        setSkeletonOn(imgRadius,true);
+        setSkeletonOn(imgTemp,true);
+
+        const {p1,p2,p3} = buildPrompts(days, pr, k);
+
+        const payload = {
+          orbital_period: days,
+          planet_radius: pr,
+          stellar_temp: k,
+          prompts: { orbital: p1, radius: p2, temp: p3 },
+          guides: { orbital: null, radius: null, temp: null }
+        };
+
+        // Adjuntar guías si existen
+        if(fileOrbital.files[0]) payload.guides.orbital = await getFileAsBase64(fileOrbital.files[0]);
+        if(fileRadius.files[0])  payload.guides.radius  = await getFileAsBase64(fileRadius.files[0]);
+        if(fileTemp.files[0])    payload.guides.temp    = await getFileAsBase64(fileTemp.files[0]);
+
+        const genRes = await fetch(GENERATE_URL, {
+          method:'POST',
+          headers:{'Content-Type':'application/json'},
+          body:JSON.stringify(payload)
+        });
+        if(!genRes.ok) throw new Error('Error en /generate-image');
+        const gen = await genRes.json();
+
+        // Función para asignar src si viene como base64 o url
+        function resolveSrc(val){
+          if(!val) return '';
+          if(typeof val === 'string' && val.startsWith('data:image')) return val;
+          return val; // asumimos URL servida
+        }
+
+        imgOrbital.src = resolveSrc(gen.orbital_period_img);
+        imgRadius.src  = resolveSrc(gen.planet_radius_img);
+        imgTemp.src    = resolveSrc(gen.stellar_temp_img);
+
+      }catch(err){
+        console.error(err);
+        [imgOrbital,imgRadius,imgTemp].forEach(el=>{
+          el.removeAttribute('src');
+        });
+        alert('No se pudieron generar las imágenes. Verifica el endpoint /generate-image.');
+      }finally{
+        setSkeletonOn(imgOrbital,false);
+        setSkeletonOn(imgRadius,false);
+        setSkeletonOn(imgTemp,false);
+      }
+    });
+  </script>
+</body>
+</html>
