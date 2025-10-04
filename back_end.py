@@ -43,24 +43,27 @@ def home():
 # This endpoint handles prediction requests
 @app.route('/predict', methods=['POST'])
 def predict():
-    # Get the data from the POST request sent by the frontend
     data = request.get_json()
     
-    # Create a DataFrame from the incoming data
-    # The feature order MUST match the training data: ['orbital_period', 'planet_radius', 'stellar_temp']
-    input_df = pd.DataFrame([[data['orbital_period'], data['planet_radius'], data['stellar_temp']]], 
-                            columns=['orbital_period', 'planet_radius', 'stellar_temp'])
-
-    # Scale the input data using the scaler we already fitted
+    fused_df = pd.read_csv('fused_kepler_k2_data.csv')
+    
+    star_id = data.get('star_id')
+    if star_id and star_id in fused_df['star_id'].values:
+        star_data = fused_df[fused_df['star_id'] == star_id].iloc[0]
+        input_df = pd.DataFrame([[star_data['orbital_period'], 
+                                star_data['planet_radius'], 
+                                star_data['stellar_temp']]], 
+                              columns=['orbital_period', 'planet_radius', 'stellar_temp'])
+    else:
+        input_df = pd.DataFrame([[data['orbital_period'], 
+                                data['planet_radius'], 
+                                data['stellar_temp']]], 
+                              columns=['orbital_period', 'planet_radius', 'stellar_temp'])
+    
     input_scaled = scaler.transform(input_df)
-
-    # Make a prediction
     prediction_encoded = model.predict(input_scaled)
-
-    # Decode the prediction from a number (0 or 1) back to a string
     prediction_decoded = le.inverse_transform(prediction_encoded)
 
-    # Return the result as JSON
     return jsonify({'prediction': prediction_decoded[0]})
 
 # --- 3. Run the Server ---
