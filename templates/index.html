@@ -528,185 +528,324 @@
         </div>
     </footer>
 
-    <script>
-        // Star system presets
-        const starSystems = {
-            'kepler-452': { period: 384.8, radius: 1.63, temp: 5757 },
-            'trappist-1': { period: 6.1, radius: 1.1, temp: 2566 },
-            'proxima-cen': { period: 11.2, radius: 1.07, temp: 3050 },
-            'hd-209458': { period: 3.52, radius: 1.38, temp: 6075 }
-        };
+<script>
+    // --- CONFIGURATION ---
+    // URL for your running Flask server's prediction endpoint
+    const PREDICT_URL = 'http://127.0.0.1:5000/predict';
 
-        // TESS dataset
-        const tessDataset = [
-            [2.470613, 1.25, 3485.0, 'PLANET'],
-            [8.46112, 11.2, 5925.0, 'PLANET'],
-            [36.319, 2.7, 5147.0, 'PLANET'],
-            [1.9547, 1.09, 3051.0, 'PLANET'],
-            [4.124, 2.2, 5634.0, 'PLANET'],
-            [12.42, 5.2, 6039.0, 'FALSE POSITIVE'],
-            [0.52, 16.5, 6200.0, 'FALSE POSITIVE'],
-            [18.2, 1.9, 4529.0, 'PLANET'],
-            [5.6, 2.6, 5621.0, 'PLANET'],
-            [3.3, 1.4, 3450.0, 'PLANET'],
-            [0.77, 21.0, 7500.0, 'FALSE POSITIVE'],
-            [105.8, 8.9, 5234.0, 'PLANET'],
-            [0.95, 18.3, 8900.0, 'FALSE POSITIVE'],
-            [42.7, 3.1, 4890.0, 'PLANET']
-        ];
+    // Star system presets
+    const starSystems = {
+        'kepler-452': { period: 384.8, radius: 1.63, temp: 5757 },
+        'trappist-1': { period: 6.1, radius: 1.1, temp: 2566 },
+        'proxima-cen': { period: 11.2, radius: 1.07, temp: 3050 },
+        'hd-209458': { period: 3.52, radius: 1.38, temp: 6075 }
+    };
 
-        // Global variables
-        let currentOrbitalPeriod = 365;
-        let currentPlanetRadius = 1;
-        let currentStellarTemp = 5778;
-        let animationFrameId = null;
+    // TESS dataset
+    const tessDataset = [
+        [2.470613, 1.25, 3485.0, 'PLANET'],
+        [8.46112, 11.2, 5925.0, 'PLANET'],
+        [36.319, 2.7, 5147.0, 'PLANET'],
+        [1.9547, 1.09, 3051.0, 'PLANET'],
+        [4.124, 2.2, 5634.0, 'PLANET'],
+        [12.42, 5.2, 6039.0, 'FALSE POSITIVE'],
+        [0.52, 16.5, 6200.0, 'FALSE POSITIVE'],
+        [18.2, 1.9, 4529.0, 'PLANET'],
+        [5.6, 2.6, 5621.0, 'PLANET'],
+        [3.3, 1.4, 3450.0, 'PLANET'],
+        [0.77, 21.0, 7500.0, 'FALSE POSITIVE'],
+        [105.8, 8.9, 5234.0, 'PLANET'],
+        [0.95, 18.3, 8900.0, 'FALSE POSITIVE'],
+        [42.7, 3.1, 4890.0, 'PLANET']
+    ];
 
-        // Scroll functions
-        function scrollToValidator() {
-            document.getElementById('validator').scrollIntoView({ behavior: 'smooth' });
-        }
+    // Global variables
+    let currentOrbitalPeriod = 365;
+    let currentPlanetRadius = 1;
+    let currentStellarTemp = 5778;
+    let animationFrameId = null;
 
-        // Load star system preset
-        function loadStarSystem(starId) {
-            const system = starSystems[starId];
-            if (system) {
-                document.getElementById('val-orbital').value = system.period;
-                document.getElementById('val-radius').value = system.radius;
-                document.getElementById('val-temp').value = system.temp;
-                syncFromValidator();
+    // --- NEW: Function to call your Flask AI model ---
+    async function fetchPrediction(period, radius, temp) {
+        try {
+            const response = await fetch(PREDICT_URL, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({
+                    orbital_period: period, // Ensure these keys match your Flask app
+                    planet_radius: radius,
+                    stellar_temp: temp
+                })
+            });
+
+            if (!response.ok) {
+                // Handle server errors (e.g., 500 Internal Server Error)
+                throw new Error(`Server responded with status: ${response.status}`);
             }
-        }
 
-        // Sync from validator to sliders
-        function syncFromValidator() {
-            const period = parseFloat(document.getElementById('val-orbital').value) || 365;
-            const radius = parseFloat(document.getElementById('val-radius').value) || 1;
-            const temp = parseFloat(document.getElementById('val-temp').value) || 5778;
-
-            // Update sliders with clamped values
-            const clampedPeriod = Math.max(0.5, Math.min(10000, period));
-            const clampedRadius = Math.max(0.3, Math.min(25, radius));
-            const clampedTemp = Math.max(2000, Math.min(40000, temp));
-
-            document.getElementById('orbital-slider').value = clampedPeriod;
-            document.getElementById('radius-slider').value = clampedRadius;
-            document.getElementById('temp-slider').value = clampedTemp;
-
-            updateOrbitalPeriod(period);
-            updatePlanetRadius(radius);
-            updateStellarTemp(temp);
-        }
-
-        // Sync from sliders to validator
-        function syncToValidator() {
-            document.getElementById('val-orbital').value = currentOrbitalPeriod;
-            document.getElementById('val-radius').value = currentPlanetRadius;
-            document.getElementById('val-temp').value = currentStellarTemp;
-        }
-
-        // Check and display limits
-        function checkLimits(value, min, max, elementId, textId) {
-            const warningEl = document.getElementById(elementId);
-            const textEl = document.getElementById(textId);
+            const data = await response.json();
+            // Assuming your Flask app returns a JSON like: {"prediction": "PLANET"}
+            return data.prediction.toUpperCase(); 
             
-            if (value < min) {
-                warningEl.classList.remove('hidden');
-                warningEl.classList.add('error');
-                textEl.textContent = `Below minimum (${min})`;
-                return true;
-            } else if (value > max) {
-                warningEl.classList.remove('hidden');
-                warningEl.classList.add('error');
-                textEl.textContent = `Above maximum (${max})`;
-                return true;
-            } else if (value < min * 1.1 || value > max * 0.9) {
-                warningEl.classList.remove('hidden');
-                warningEl.classList.remove('error');
-                textEl.textContent = 'Approaching limit';
-                return false;
-            } else {
-                warningEl.classList.add('hidden');
-                return false;
+        } catch (error) {
+            console.error("Prediction failed:", error);
+            // Return a specific error string to handle in the UI
+            return 'ERROR'; 
+        }
+    }
+
+    // --- UPDATED: Analyze Candidate function ---
+    async function analyzeCandidate() {
+        const period = parseFloat(document.getElementById('val-orbital').value);
+        const radius = parseFloat(document.getElementById('val-radius').value);
+        const temp = parseFloat(document.getElementById('val-temp').value);
+        
+        if (isNaN(period) || isNaN(radius) || isNaN(temp)) {
+            alert('Please complete all fields with valid values');
+            return;
+        }
+        
+        document.getElementById('loader-container').classList.remove('hidden');
+        document.getElementById('result-display').classList.add('hidden');
+        document.getElementById('true-label-display').classList.add('hidden');
+        
+        // Call the new fetch function
+        const prediction = await fetchPrediction(period, radius, temp);
+        
+        // This timeout simulates a small delay, you can adjust or remove it
+        setTimeout(() => {
+            document.getElementById('loader-container').classList.add('hidden');
+            document.getElementById('result-display').classList.remove('hidden');
+            
+            if (prediction === 'PLANET') {
+                document.getElementById('result-text').textContent = 'Confirmed: Exoplanet Candidate';
+                document.getElementById('result-text').style.color = 'var(--apple-green)';
+                document.getElementById('result-description').textContent = 'Model indicates transit signature is consistent with a planetary body.';
+            } else if (prediction === 'FALSE POSITIVE') {
+                document.getElementById('result-text').textContent = 'Classification: False Positive';
+                document.getElementById('result-text').style.color = 'var(--apple-red)';
+                document.getElementById('result-description').textContent = 'Model suggests signal characteristics of stellar contamination.';
+            } else { // Handle the 'ERROR' case
+                 document.getElementById('result-text').textContent = 'Analysis Error';
+                 document.getElementById('result-text').style.color = 'var(--apple-yellow)';
+                 document.getElementById('result-description').textContent = 'Could not connect to the AI model. Please ensure the Flask server is running.';
             }
-        }
+        }, 500); // Reduced timeout
+    }
 
-        // Update orbital period
-        function updateOrbitalPeriod(value) {
-            currentOrbitalPeriod = parseFloat(value);
-            document.getElementById('orbital-value').textContent = value;
-            
-            checkLimits(currentOrbitalPeriod, 0.5, 10000, 'orbital-limit-warning', 'orbital-limit-text');
-            
-            syncToValidator();
-            drawOrbitalSystem();
-        }
+    // --- UPDATED: Load Random Candidate function ---
+    async function loadRandomCandidate() {
+        const randomIndex = Math.floor(Math.random() * tessDataset.length);
+        const [period, radius, temp, trueLabel] = tessDataset[randomIndex];
+        
+        document.getElementById('val-orbital').value = period;
+        document.getElementById('val-radius').value = radius;
+        document.getElementById('val-temp').value = temp;
+        
+        syncFromValidator();
+        
+        document.getElementById('loader-container').classList.remove('hidden');
+        document.getElementById('result-display').classList.add('hidden');
+        
+        // Also use the new fetch function here
+        const prediction = await fetchPrediction(period, radius, temp);
 
-        // Update planet radius
-        function updatePlanetRadius(value) {
-            currentPlanetRadius = parseFloat(value);
-            document.getElementById('radius-value').textContent = value;
+        // This timeout simulates a small delay
+        setTimeout(() => {
+            document.getElementById('loader-container').classList.add('hidden');
+            document.getElementById('result-display').classList.remove('hidden');
+            document.getElementById('true-label-display').classList.remove('hidden');
             
-            checkLimits(currentPlanetRadius, 0.3, 25, 'radius-limit-warning', 'radius-limit-text');
+            if (prediction === 'PLANET') {
+                document.getElementById('result-text').textContent = 'Confirmed: Exoplanet Candidate';
+                document.getElementById('result-text').style.color = 'var(--apple-green)';
+                document.getElementById('result-description').textContent = 'Model indicates transit signature is consistent with a planetary body.';
+            } else if (prediction === 'FALSE POSITIVE') {
+                document.getElementById('result-text').textContent = 'Classification: False Positive';
+                document.getElementById('result-text').style.color = 'var(--apple-red)';
+                document.getElementById('result-description').textContent = 'Model suggests signal characteristics of stellar contamination.';
+            } else { // Handle error
+                 document.getElementById('result-text').textContent = 'Analysis Error';
+                 document.getElementById('result-text').style.color = 'var(--apple-yellow)';
+                 document.getElementById('result-description').textContent = 'Could not connect to the AI model.';
+            }
             
-            // Update classification
-            let classification = '';
-            if (value < 0.5) classification = 'Sub-Earth';
-            else if (value < 1.5) classification = 'Earth-like planet';
-            else if (value < 2.5) classification = 'Super-Earth';
-            else if (value < 4) classification = 'Mini-Neptune';
-            else if (value < 11) classification = 'Neptune-like';
-            else if (value < 20) classification = 'Jupiter-like';
-            else classification = 'Super-Jupiter';
-            
-            document.getElementById('planet-classification').textContent = classification;
-            
-            syncToValidator();
-            drawPlanetComparison();
-        }
+            document.getElementById('true-label').textContent = trueLabel;
+            document.getElementById('true-label').style.color = 
+                trueLabel === 'PLANET' ? 'var(--apple-green)' : 'var(--apple-red)';
+        }, 500); // Reduced timeout
+    }
+    
+    // --- REMOVED ---
+    // The old predictExoplanet function is no longer needed.
+    // function predictExoplanet(period, radius, temp) { ... }
 
-        // Update stellar temperature
-        function updateStellarTemp(value) {
-            currentStellarTemp = parseInt(value);
-            document.getElementById('temp-value').textContent = value;
-            
-            checkLimits(currentStellarTemp, 2000, 40000, 'temp-limit-warning', 'temp-limit-text');
-            
-            // Update star type
-            let starType = '';
-            if (value < 3700) starType = 'M-class red dwarf';
-            else if (value < 5200) starType = 'K-class orange dwarf';
-            else if (value < 6000) starType = 'G-class sun-like star';
-            else if (value < 7500) starType = 'F-class yellow-white star';
-            else if (value < 10000) starType = 'A-class white star';
-            else if (value < 30000) starType = 'B-class blue star';
-            else starType = 'O-class blue giant';
-            
-            document.getElementById('star-type').textContent = starType;
-            
-            syncToValidator();
-            drawThermalPlanet();
-        }
 
-        // Draw orbital system with dynamic scaling
-        function drawOrbitalSystem() {
-            const canvas = document.getElementById('orbital-canvas');
-            if (!canvas) return;
-            
-            const ctx = canvas.getContext('2d');
-            canvas.width = canvas.offsetWidth;
-            canvas.height = canvas.offsetHeight;
-            
-            const centerX = canvas.width / 2;
-            const centerY = canvas.height / 2;
-            
+    // [ The rest of your JavaScript code (drawing functions, etc.) remains unchanged ]
+    // ... (include all your other functions like scrollToValidator, loadStarSystem, syncFromValidator, etc. here) ...
+    
+    // --- SCROLL, SYNC, and DRAWING FUNCTIONS (Unchanged) ---
+    function scrollToValidator() {
+        document.getElementById('validator').scrollIntoView({ behavior: 'smooth' });
+    }
+
+    function loadStarSystem(starId) {
+        const system = starSystems[starId];
+        if (system) {
+            document.getElementById('val-orbital').value = system.period;
+            document.getElementById('val-radius').value = system.radius;
+            document.getElementById('val-temp').value = system.temp;
+            syncFromValidator();
+        }
+    }
+
+    function syncFromValidator() {
+        const period = parseFloat(document.getElementById('val-orbital').value) || 365;
+        const radius = parseFloat(document.getElementById('val-radius').value) || 1;
+        const temp = parseFloat(document.getElementById('val-temp').value) || 5778;
+
+        const clampedPeriod = Math.max(0.5, Math.min(10000, period));
+        const clampedRadius = Math.max(0.3, Math.min(25, radius));
+        const clampedTemp = Math.max(2000, Math.min(40000, temp));
+
+        document.getElementById('orbital-slider').value = clampedPeriod;
+        document.getElementById('radius-slider').value = clampedRadius;
+        document.getElementById('temp-slider').value = clampedTemp;
+
+        updateOrbitalPeriod(period);
+        updatePlanetRadius(radius);
+        updateStellarTemp(temp);
+    }
+
+    function syncToValidator() {
+        document.getElementById('val-orbital').value = currentOrbitalPeriod;
+        document.getElementById('val-radius').value = currentPlanetRadius;
+        document.getElementById('val-temp').value = currentStellarTemp;
+    }
+
+    function checkLimits(value, min, max, elementId, textId) {
+        const warningEl = document.getElementById(elementId);
+        const textEl = document.getElementById(textId);
+        
+        if (value < min) {
+            warningEl.classList.remove('hidden');
+            warningEl.classList.add('error');
+            textEl.textContent = `Below minimum (${min})`;
+            return true;
+        } else if (value > max) {
+            warningEl.classList.remove('hidden');
+            warningEl.classList.add('error');
+            textEl.textContent = `Above maximum (${max})`;
+            return true;
+        } else if (value < min * 1.1 || value > max * 0.9) {
+            warningEl.classList.remove('hidden');
+            warningEl.classList.remove('error');
+            textEl.textContent = 'Approaching limit';
+            return false;
+        } else {
+            warningEl.classList.add('hidden');
+            return false;
+        }
+    }
+
+    function updateOrbitalPeriod(value) {
+        currentOrbitalPeriod = parseFloat(value);
+        document.getElementById('orbital-value').textContent = value;
+        checkLimits(currentOrbitalPeriod, 0.5, 10000, 'orbital-limit-warning', 'orbital-limit-text');
+        syncToValidator();
+        drawOrbitalSystem();
+    }
+
+    function updatePlanetRadius(value) {
+        currentPlanetRadius = parseFloat(value);
+        document.getElementById('radius-value').textContent = value;
+        checkLimits(currentPlanetRadius, 0.3, 25, 'radius-limit-warning', 'radius-limit-text');
+        
+        let classification = '';
+        if (value < 0.5) classification = 'Sub-Earth';
+        else if (value < 1.5) classification = 'Earth-like planet';
+        else if (value < 2.5) classification = 'Super-Earth';
+        else if (value < 4) classification = 'Mini-Neptune';
+        else if (value < 11) classification = 'Neptune-like';
+        else if (value < 20) classification = 'Jupiter-like';
+        else classification = 'Super-Jupiter';
+        
+        document.getElementById('planet-classification').textContent = classification;
+        syncToValidator();
+        drawPlanetComparison();
+    }
+
+    function updateStellarTemp(value) {
+        currentStellarTemp = parseInt(value);
+        document.getElementById('temp-value').textContent = value;
+        checkLimits(currentStellarTemp, 2000, 40000, 'temp-limit-warning', 'temp-limit-text');
+        
+        let starType = '';
+        if (value < 3700) starType = 'M-class red dwarf';
+        else if (value < 5200) starType = 'K-class orange dwarf';
+        else if (value < 6000) starType = 'G-class sun-like star';
+        else if (value < 7500) starType = 'F-class yellow-white star';
+        else if (value < 10000) starType = 'A-class white star';
+        else if (value < 30000) starType = 'B-class blue star';
+        else starType = 'O-class blue giant';
+        
+        document.getElementById('star-type').textContent = starType;
+        syncToValidator();
+        drawThermalPlanet();
+    }
+
+    function drawOrbitalSystem() {
+        const canvas = document.getElementById('orbital-canvas');
+        if (!canvas) return;
+        
+        const ctx = canvas.getContext('2d');
+        canvas.width = canvas.offsetWidth;
+        canvas.height = canvas.offsetHeight;
+        
+        const centerX = canvas.width / 2;
+        const centerY = canvas.height / 2;
+        
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
+        
+        const scaleFactor = Math.min(1, 100 / Math.sqrt(currentOrbitalPeriod));
+        const maxOrbitRadius = Math.min(canvas.width, canvas.height) * 0.4;
+        
+        const earthOrbitRadius = maxOrbitRadius * 0.5 * scaleFactor;
+        ctx.strokeStyle = 'rgba(100, 150, 255, 0.2)';
+        ctx.lineWidth = 1;
+        ctx.setLineDash([5, 5]);
+        ctx.beginPath();
+        ctx.arc(centerX, centerY, earthOrbitRadius, 0, Math.PI * 2);
+        ctx.stroke();
+        ctx.setLineDash([]);
+        
+        ctx.fillStyle = 'rgba(100, 150, 255, 0.5)';
+        ctx.font = '10px Inter';
+        ctx.fillText('Earth orbit', centerX + earthOrbitRadius + 5, centerY);
+        
+        const orbitRadius = maxOrbitRadius * Math.min(1, Math.log10(currentOrbitalPeriod + 1) / 4) * scaleFactor;
+        ctx.strokeStyle = 'rgba(255, 255, 255, 0.4)';
+        ctx.lineWidth = 2;
+        ctx.beginPath();
+        ctx.arc(centerX, centerY, orbitRadius, 0, Math.PI * 2);
+        ctx.stroke();
+        
+        const starSize = 20 * scaleFactor;
+        const gradient = ctx.createRadialGradient(centerX, centerY, 0, centerX, centerY, starSize);
+        gradient.addColorStop(0, '#FFD700');
+        gradient.addColorStop(1, 'rgba(255, 215, 0, 0)');
+        ctx.fillStyle = gradient;
+        ctx.beginPath();
+        ctx.arc(centerX, centerY, starSize, 0, Math.PI * 2);
+        ctx.fill();
+        
+        if (animationFrameId) cancelAnimationFrame(animationFrameId);
+        
+        function animate() {
             ctx.clearRect(0, 0, canvas.width, canvas.height);
             
-            // Calculate scale factor for extreme values
-            const scaleFactor = Math.min(1, 100 / Math.sqrt(currentOrbitalPeriod));
-            const maxOrbitRadius = Math.min(canvas.width, canvas.height) * 0.4;
-            
-            // Earth's orbit (reference)
-            const earthOrbitRadius = maxOrbitRadius * 0.5 * scaleFactor;
             ctx.strokeStyle = 'rgba(100, 150, 255, 0.2)';
             ctx.lineWidth = 1;
             ctx.setLineDash([5, 5]);
@@ -715,21 +854,16 @@
             ctx.stroke();
             ctx.setLineDash([]);
             
-            // Label for Earth orbit
             ctx.fillStyle = 'rgba(100, 150, 255, 0.5)';
             ctx.font = '10px Inter';
             ctx.fillText('Earth orbit', centerX + earthOrbitRadius + 5, centerY);
             
-            // Exoplanet orbit
-            const orbitRadius = maxOrbitRadius * Math.min(1, Math.log10(currentOrbitalPeriod + 1) / 4) * scaleFactor;
             ctx.strokeStyle = 'rgba(255, 255, 255, 0.4)';
             ctx.lineWidth = 2;
             ctx.beginPath();
             ctx.arc(centerX, centerY, orbitRadius, 0, Math.PI * 2);
             ctx.stroke();
             
-            // Draw star (scaled)
-            const starSize = 20 * scaleFactor;
             const gradient = ctx.createRadialGradient(centerX, centerY, 0, centerX, centerY, starSize);
             gradient.addColorStop(0, '#FFD700');
             gradient.addColorStop(1, 'rgba(255, 215, 0, 0)');
@@ -738,330 +872,169 @@
             ctx.arc(centerX, centerY, starSize, 0, Math.PI * 2);
             ctx.fill();
             
-            // Animate planet
-            if (animationFrameId) cancelAnimationFrame(animationFrameId);
+            const angle = Date.now() * 0.001 / Math.log10(currentOrbitalPeriod + 1);
+            const planetX = centerX + Math.cos(angle) * orbitRadius;
+            const planetY = centerY + Math.sin(angle) * orbitRadius;
             
-            function animate() {
-                ctx.clearRect(0, 0, canvas.width, canvas.height);
-                
-                // Redraw static elements
-                ctx.strokeStyle = 'rgba(100, 150, 255, 0.2)';
-                ctx.lineWidth = 1;
-                ctx.setLineDash([5, 5]);
-                ctx.beginPath();
-                ctx.arc(centerX, centerY, earthOrbitRadius, 0, Math.PI * 2);
-                ctx.stroke();
-                ctx.setLineDash([]);
-                
-                ctx.fillStyle = 'rgba(100, 150, 255, 0.5)';
-                ctx.font = '10px Inter';
-                ctx.fillText('Earth orbit', centerX + earthOrbitRadius + 5, centerY);
-                
-                ctx.strokeStyle = 'rgba(255, 255, 255, 0.4)';
-                ctx.lineWidth = 2;
-                ctx.beginPath();
-                ctx.arc(centerX, centerY, orbitRadius, 0, Math.PI * 2);
-                ctx.stroke();
-                
-                const gradient = ctx.createRadialGradient(centerX, centerY, 0, centerX, centerY, starSize);
-                gradient.addColorStop(0, '#FFD700');
-                gradient.addColorStop(1, 'rgba(255, 215, 0, 0)');
-                ctx.fillStyle = gradient;
-                ctx.beginPath();
-                ctx.arc(centerX, centerY, starSize, 0, Math.PI * 2);
-                ctx.fill();
-                
-                // Draw planet
-                const angle = Date.now() * 0.001 / Math.log10(currentOrbitalPeriod + 1);
-                const planetX = centerX + Math.cos(angle) * orbitRadius;
-                const planetY = centerY + Math.sin(angle) * orbitRadius;
-                
-                ctx.fillStyle = '#0071e3';
-                ctx.beginPath();
-                ctx.arc(planetX, planetY, 6 * scaleFactor, 0, Math.PI * 2);
-                ctx.fill();
-                
-                animationFrameId = requestAnimationFrame(animate);
-            }
+            ctx.fillStyle = 'var(--apple-blue)';
+            ctx.beginPath();
+            ctx.arc(planetX, planetY, 6 * scaleFactor, 0, Math.PI * 2);
+            ctx.fill();
             
-            animate();
+            animationFrameId = requestAnimationFrame(animate);
         }
+        
+        animate();
+    }
 
-        // Draw planet size comparison with dynamic scaling
-        function drawPlanetComparison() {
-            const canvas = document.getElementById('size-canvas');
-            if (!canvas) return;
-            
-            const ctx = canvas.getContext('2d');
-            canvas.width = canvas.offsetWidth;
-            canvas.height = canvas.offsetHeight;
-            
-            const centerY = canvas.height / 2;
-            const spacing = canvas.width / 3;
-            
-            ctx.clearRect(0, 0, canvas.width, canvas.height);
-            
-            // Calculate scale to fit both planets
-            const maxRadius = Math.min(canvas.height * 0.3, 100);
-            const scaleFactor = currentPlanetRadius > 5 ? maxRadius / (30 * currentPlanetRadius) : maxRadius / 150;
-            
-            // Draw Earth (reference)
-            const earthRadius = 30 * scaleFactor;
-            const earthX = spacing;
-            
-            const earthGradient = ctx.createRadialGradient(earthX, centerY, 0, earthX, centerY, earthRadius);
-            earthGradient.addColorStop(0, '#4169E1');
-            earthGradient.addColorStop(0.7, '#1E90FF');
-            earthGradient.addColorStop(1, '#000080');
-            
-            ctx.fillStyle = earthGradient;
-            ctx.beginPath();
-            ctx.arc(earthX, centerY, earthRadius, 0, Math.PI * 2);
-            ctx.fill();
-            
-            // Earth label
-            ctx.fillStyle = '#86868b';
-            ctx.font = '12px Inter';
-            ctx.textAlign = 'center';
-            ctx.fillText('Earth', earthX, centerY + earthRadius + 20);
-            ctx.fillText('1.0 R⊕', earthX, centerY + earthRadius + 35);
-            
-            // Draw Exoplanet
-            const exoRadius = earthRadius * currentPlanetRadius;
-            const exoX = spacing * 2;
-            
-            // Color based on size
-            let exoGradient = ctx.createRadialGradient(exoX, centerY, 0, exoX, centerY, exoRadius);
-            
-            if (currentPlanetRadius < 1.5) {
-                exoGradient.addColorStop(0, '#4A90E2');
-                exoGradient.addColorStop(1, '#2E5C8A');
-            } else if (currentPlanetRadius < 4) {
-                exoGradient.addColorStop(0, '#E67E22');
-                exoGradient.addColorStop(1, '#8B4513');
-            } else if (currentPlanetRadius < 11) {
-                exoGradient.addColorStop(0, '#9B59B6');
-                exoGradient.addColorStop(1, '#5B2C6F');
-            } else {
-                exoGradient.addColorStop(0, '#E74C3C');
-                exoGradient.addColorStop(1, '#7B241C');
-            }
-            
-            ctx.fillStyle = exoGradient;
-            ctx.beginPath();
-            ctx.arc(exoX, centerY, exoRadius, 0, Math.PI * 2);
-            ctx.fill();
-            
-            // Exoplanet label
-            ctx.fillText('Exoplanet', exoX, centerY + Math.max(exoRadius, 20) + 20);
-            ctx.fillText(`${currentPlanetRadius.toFixed(1)} R⊕`, exoX, centerY + Math.max(exoRadius, 20) + 35);
-            
-            // Scale reference
-            if (currentPlanetRadius > 10 || currentPlanetRadius < 0.5) {
-                ctx.fillStyle = 'rgba(255, 255, 255, 0.3)';
-                ctx.font = '10px Inter';
-                ctx.fillText(`Scale: ${(1/scaleFactor * 0.03).toFixed(2)}×`, canvas.width - 60, 20);
-            }
+    function drawPlanetComparison() {
+        const canvas = document.getElementById('size-canvas');
+        if (!canvas) return;
+        
+        const ctx = canvas.getContext('2d');
+        canvas.width = canvas.offsetWidth;
+        canvas.height = canvas.offsetHeight;
+        
+        const centerY = canvas.height / 2;
+        const spacing = canvas.width / 3;
+        
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
+        
+        const maxRadius = Math.min(canvas.height * 0.3, 100);
+        const scaleFactor = currentPlanetRadius > 5 ? maxRadius / (30 * currentPlanetRadius) : maxRadius / 150;
+        
+        const earthRadius = 30 * scaleFactor;
+        const earthX = spacing;
+        
+        const earthGradient = ctx.createRadialGradient(earthX, centerY, 0, earthX, centerY, earthRadius);
+        earthGradient.addColorStop(0, '#4169E1');
+        earthGradient.addColorStop(0.7, '#1E90FF');
+        earthGradient.addColorStop(1, '#000080');
+        
+        ctx.fillStyle = earthGradient;
+        ctx.beginPath();
+        ctx.arc(earthX, centerY, earthRadius, 0, Math.PI * 2);
+        ctx.fill();
+        
+        ctx.fillStyle = '#86868b';
+        ctx.font = '12px Inter';
+        ctx.textAlign = 'center';
+        ctx.fillText('Earth', earthX, centerY + earthRadius + 20);
+        ctx.fillText('1.0 R⊕', earthX, centerY + earthRadius + 35);
+        
+        const exoRadius = earthRadius * currentPlanetRadius;
+        const exoX = spacing * 2;
+        
+        let exoGradient = ctx.createRadialGradient(exoX, centerY, 0, exoX, centerY, exoRadius);
+        
+        if (currentPlanetRadius < 1.5) {
+            exoGradient.addColorStop(0, '#4A90E2');
+            exoGradient.addColorStop(1, '#2E5C8A');
+        } else if (currentPlanetRadius < 4) {
+            exoGradient.addColorStop(0, '#E67E22');
+            exoGradient.addColorStop(1, '#8B4513');
+        } else if (currentPlanetRadius < 11) {
+            exoGradient.addColorStop(0, '#9B59B6');
+            exoGradient.addColorStop(1, '#5B2C6F');
+        } else {
+            exoGradient.addColorStop(0, '#E74C3C');
+            exoGradient.addColorStop(1, '#7B241C');
         }
-
-        // Draw thermal visualization with full color range
-        function drawThermalPlanet() {
-            const canvas = document.getElementById('thermal-canvas');
-            if (!canvas) return;
-            
-            const ctx = canvas.getContext('2d');
-            canvas.width = canvas.offsetWidth;
-            canvas.height = canvas.offsetHeight;
-            
-            const centerX = canvas.width / 2;
-            const centerY = canvas.height / 2;
-            const radius = 80;
-            
-            ctx.clearRect(0, 0, canvas.width, canvas.height);
-            
-            // Temperature-based gradient with full spectrum
-            const gradient = ctx.createRadialGradient(centerX - 20, centerY - 20, 0, centerX, centerY, radius);
-            
-            // Map temperature to color (full range)
-            const tempNorm = (currentStellarTemp - 2000) / (40000 - 2000);
-            
-            if (tempNorm < 0.1) {
-                // Very cool - deep reds
-                gradient.addColorStop(0, '#8B0000');
-                gradient.addColorStop(0.5, '#4B0000');
-                gradient.addColorStop(1, '#1C0000');
-            } else if (tempNorm < 0.2) {
-                // Cool - reds to orange
-                gradient.addColorStop(0, '#FF4500');
-                gradient.addColorStop(0.5, '#DC143C');
-                gradient.addColorStop(1, '#8B0000');
-            } else if (tempNorm < 0.3) {
-                // Warm - oranges
-                gradient.addColorStop(0, '#FFA500');
-                gradient.addColorStop(0.5, '#FF8C00');
-                gradient.addColorStop(1, '#D2691E');
-            } else if (tempNorm < 0.4) {
-                // Yellow-orange
-                gradient.addColorStop(0, '#FFD700');
-                gradient.addColorStop(0.5, '#FFA500');
-                gradient.addColorStop(1, '#FF8C00');
-            } else if (tempNorm < 0.5) {
-                // Yellow-white
-                gradient.addColorStop(0, '#FFFACD');
-                gradient.addColorStop(0.5, '#FFD700');
-                gradient.addColorStop(1, '#FFA500');
-            } else if (tempNorm < 0.6) {
-                // White
-                gradient.addColorStop(0, '#FFFFFF');
-                gradient.addColorStop(0.5, '#F0F8FF');
-                gradient.addColorStop(1, '#E6E6FA');
-            } else if (tempNorm < 0.7) {
-                // Blue-white
-                gradient.addColorStop(0, '#E0FFFF');
-                gradient.addColorStop(0.5, '#B0E0E6');
-                gradient.addColorStop(1, '#87CEEB');
-            } else if (tempNorm < 0.85) {
-                // Light blue
-                gradient.addColorStop(0, '#87CEEB');
-                gradient.addColorStop(0.5, '#4682B4');
-                gradient.addColorStop(1, '#1E90FF');
-            } else {
-                // Deep blue to violet
-                gradient.addColorStop(0, '#4169E1');
-                gradient.addColorStop(0.5, '#0000CD');
-                gradient.addColorStop(1, '#4B0082');
-            }
-            
-            ctx.fillStyle = gradient;
-            ctx.beginPath();
-            ctx.arc(centerX, centerY, radius, 0, Math.PI * 2);
-            ctx.fill();
-            
-            // Atmosphere glow effect
-            const glowIntensity = tempNorm;
-            const atmosphereGradient = ctx.createRadialGradient(centerX, centerY, radius, centerX, centerY, radius + 20);
-            atmosphereGradient.addColorStop(0, `rgba(255, 255, 255, ${0.2 * glowIntensity})`);
-            atmosphereGradient.addColorStop(1, 'rgba(255, 255, 255, 0)');
-            
-            ctx.fillStyle = atmosphereGradient;
-            ctx.beginPath();
-            ctx.arc(centerX, centerY, radius + 20, 0, Math.PI * 2);
-            ctx.fill();
-            
-            // Temperature scale
-            ctx.fillStyle = 'rgba(255, 255, 255, 0.5)';
-            ctx.font = '11px Inter';
-            ctx.textAlign = 'center';
-            ctx.fillText(`${currentStellarTemp} K`, centerX, centerY + radius + 40);
-            
-            // Wien's law wavelength
-            const peakWavelength = (2898 / currentStellarTemp * 1000).toFixed(0);
+        
+        ctx.fillStyle = exoGradient;
+        ctx.beginPath();
+        ctx.arc(exoX, centerY, exoRadius, 0, Math.PI * 2);
+        ctx.fill();
+        
+        ctx.fillText('Exoplanet', exoX, centerY + Math.max(exoRadius, 20) + 20);
+        ctx.fillText(`${currentPlanetRadius.toFixed(1)} R⊕`, exoX, centerY + Math.max(exoRadius, 20) + 35);
+        
+        if (currentPlanetRadius > 10 || currentPlanetRadius < 0.5) {
+            ctx.fillStyle = 'rgba(255, 255, 255, 0.3)';
             ctx.font = '10px Inter';
-            ctx.fillText(`Peak λ: ${peakWavelength} nm`, centerX, centerY + radius + 55);
+            ctx.fillText(`Scale: ${(1/scaleFactor * 0.03).toFixed(2)}×`, canvas.width - 60, 20);
         }
+    }
 
-        // Prediction model
-        function predictExoplanet(period, radius, temp) {
-            if (radius > 15) return 'FALSE POSITIVE';
-            if (period < 1 && temp > 6500) return 'FALSE POSITIVE';
-            if (radius < 2.5 && temp > 3000 && temp < 7000) return 'PLANET';
-            if (radius < 10 && temp < 6000 && temp > 3000 && period > 1) return 'PLANET';
-            return 'FALSE POSITIVE';
+    function drawThermalPlanet() {
+        const canvas = document.getElementById('thermal-canvas');
+        if (!canvas) return;
+        
+        const ctx = canvas.getContext('2d');
+        canvas.width = canvas.offsetWidth;
+        canvas.height = canvas.offsetHeight;
+        
+        const centerX = canvas.width / 2;
+        const centerY = canvas.height / 2;
+        const radius = 80;
+        
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
+        
+        const gradient = ctx.createRadialGradient(centerX - 20, centerY - 20, 0, centerX, centerY, radius);
+        
+        const tempNorm = (currentStellarTemp - 2000) / (40000 - 2000);
+        
+        if (tempNorm < 0.1) {
+            gradient.addColorStop(0, '#8B0000'); gradient.addColorStop(0.5, '#4B0000'); gradient.addColorStop(1, '#1C0000');
+        } else if (tempNorm < 0.2) {
+            gradient.addColorStop(0, '#FF4500'); gradient.addColorStop(0.5, '#DC143C'); gradient.addColorStop(1, '#8B0000');
+        } else if (tempNorm < 0.3) {
+            gradient.addColorStop(0, '#FFA500'); gradient.addColorStop(0.5, '#FF8C00'); gradient.addColorStop(1, '#D2691E');
+        } else if (tempNorm < 0.4) {
+            gradient.addColorStop(0, '#FFD700'); gradient.addColorStop(0.5, '#FFA500'); gradient.addColorStop(1, '#FF8C00');
+        } else if (tempNorm < 0.5) {
+            gradient.addColorStop(0, '#FFFACD'); gradient.addColorStop(0.5, '#FFD700'); gradient.addColorStop(1, '#FFA500');
+        } else if (tempNorm < 0.6) {
+            gradient.addColorStop(0, '#FFFFFF'); gradient.addColorStop(0.5, '#F0F8FF'); gradient.addColorStop(1, '#E6E6FA');
+        } else if (tempNorm < 0.7) {
+            gradient.addColorStop(0, '#E0FFFF'); gradient.addColorStop(0.5, '#B0E0E6'); gradient.addColorStop(1, '#87CEEB');
+        } else if (tempNorm < 0.85) {
+            gradient.addColorStop(0, '#87CEEB'); gradient.addColorStop(0.5, '#4682B4'); gradient.addColorStop(1, '#1E90FF');
+        } else {
+            gradient.addColorStop(0, '#4169E1'); gradient.addColorStop(0.5, '#0000CD'); gradient.addColorStop(1, '#4B0082');
         }
+        
+        ctx.fillStyle = gradient;
+        ctx.beginPath();
+        ctx.arc(centerX, centerY, radius, 0, Math.PI * 2);
+        ctx.fill();
+        
+        const glowIntensity = tempNorm;
+        const atmosphereGradient = ctx.createRadialGradient(centerX, centerY, radius, centerX, centerY, radius + 20);
+        atmosphereGradient.addColorStop(0, `rgba(255, 255, 255, ${0.2 * glowIntensity})`);
+        atmosphereGradient.addColorStop(1, 'rgba(255, 255, 255, 0)');
+        
+        ctx.fillStyle = atmosphereGradient;
+        ctx.beginPath();
+        ctx.arc(centerX, centerY, radius + 20, 0, Math.PI * 2);
+        ctx.fill();
+        
+        ctx.fillStyle = 'rgba(255, 255, 255, 0.5)';
+        ctx.font = '11px Inter';
+        ctx.textAlign = 'center';
+        ctx.fillText(`${currentStellarTemp} K`, centerX, centerY + radius + 40);
+        
+        const peakWavelength = (2898 / currentStellarTemp * 1000).toFixed(0);
+        ctx.font = '10px Inter';
+        ctx.fillText(`Peak λ: ${peakWavelength} nm`, centerX, centerY + radius + 55);
+    }
+    
+    window.onload = function() {
+        document.getElementById('val-orbital').value = currentOrbitalPeriod;
+        document.getElementById('val-radius').value = currentPlanetRadius;
+        document.getElementById('val-temp').value = currentStellarTemp;
+        
+        drawOrbitalSystem();
+        drawPlanetComparison();
+        drawThermalPlanet();
 
-        // Analyze candidate
-        function analyzeCandidate() {
-            const period = parseFloat(document.getElementById('val-orbital').value);
-            const radius = parseFloat(document.getElementById('val-radius').value);
-            const temp = parseFloat(document.getElementById('val-temp').value);
-            
-            if (isNaN(period) || isNaN(radius) || isNaN(temp)) {
-                alert('Please complete all fields with valid values');
-                return;
-            }
-            
-            document.getElementById('loader-container').classList.remove('hidden');
-            document.getElementById('result-display').classList.add('hidden');
-            document.getElementById('true-label-display').classList.add('hidden');
-            
-            setTimeout(() => {
-                const prediction = predictExoplanet(period, radius, temp);
-                
-                document.getElementById('loader-container').classList.add('hidden');
-                document.getElementById('result-display').classList.remove('hidden');
-                
-                if (prediction === 'PLANET') {
-                    document.getElementById('result-text').textContent = 'Confirmed: Exoplanet Candidate';
-                    document.getElementById('result-text').style.color = '#34c759';
-                    document.getElementById('result-description').textContent = 
-                        'Transit signature consistent with planetary body';
-                } else {
-                    document.getElementById('result-text').textContent = 'Classification: False Positive';
-                    document.getElementById('result-text').style.color = '#ff3b30';
-                    document.getElementById('result-description').textContent = 
-                        'Signal characteristics suggest stellar contamination';
-                }
-            }, 1500);
-        }
-
-        // Load random candidate
-        function loadRandomCandidate() {
-            const randomIndex = Math.floor(Math.random() * tessDataset.length);
-            const [period, radius, temp, trueLabel] = tessDataset[randomIndex];
-            
-            document.getElementById('val-orbital').value = period;
-            document.getElementById('val-radius').value = radius;
-            document.getElementById('val-temp').value = temp;
-            
-            syncFromValidator();
-            
-            document.getElementById('loader-container').classList.remove('hidden');
-            document.getElementById('result-display').classList.add('hidden');
-            
-            setTimeout(() => {
-                const prediction = predictExoplanet(period, radius, temp);
-                
-                document.getElementById('loader-container').classList.add('hidden');
-                document.getElementById('result-display').classList.remove('hidden');
-                document.getElementById('true-label-display').classList.remove('hidden');
-                
-                if (prediction === 'PLANET') {
-                    document.getElementById('result-text').textContent = 'Confirmed: Exoplanet Candidate';
-                    document.getElementById('result-text').style.color = '#34c759';
-                    document.getElementById('result-description').textContent = 
-                        'Transit signature consistent with planetary body';
-                } else {
-                    document.getElementById('result-text').textContent = 'Classification: False Positive';
-                    document.getElementById('result-text').style.color = '#ff3b30';
-                    document.getElementById('result-description').textContent = 
-                        'Signal characteristics suggest stellar contamination';
-                }
-                
-                document.getElementById('true-label').textContent = trueLabel;
-                document.getElementById('true-label').style.color = 
-                    trueLabel === 'PLANET' ? '#34c759' : '#ff3b30';
-            }, 1500);
-        }
-
-        // Initialize on load
-        window.onload = function() {
-            // Set initial values
-            document.getElementById('val-orbital').value = currentOrbitalPeriod;
-            document.getElementById('val-radius').value = currentPlanetRadius;
-            document.getElementById('val-temp').value = currentStellarTemp;
-            
-            // Start visualizations
+        window.addEventListener('resize', function() {
             drawOrbitalSystem();
             drawPlanetComparison();
             drawThermalPlanet();
+        });
+    }
 
-            // Add resize listener to redraw canvases
-            window.addEventListener('resize', function() {
-                drawOrbitalSystem();
-                drawPlanetComparison();
-                drawThermalPlanet();
-            });
-        }
-    </script>
+</script>
 </body>
 </html>
