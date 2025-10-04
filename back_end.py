@@ -38,7 +38,7 @@ print("Model trained and ready!")
 # This endpoint serves the main HTML page
 @app.route('/')
 def home():
-    return render_template('exoplanet-explorer.html')
+    return render_template('index.html')
 
 # This endpoint handles prediction requests
 @app.route('/predict', methods=['POST'])
