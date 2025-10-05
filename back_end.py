@@ -316,7 +316,7 @@ def predict():
             for class_name, prob in zip(le.classes_, prediction_proba[0])
         }
         
-        return jsonify({'prediction': prediction_decoded[0],})
+        return jsonify({'prediction': prediction_decoded[0]})
     
     except Exception as e:
         return jsonify({'error': str(e)}), 400
