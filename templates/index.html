@@ -343,13 +343,12 @@
                 resultText.textContent = 'Classification: False Positive';
                 resultText.style.color = 'var(--apple-red)';
                 resultDesc.textContent = 'Model suggests signal characteristics of stellar contamination or other phenomena.';
+                habText.textContent = 'Not Habitable';
+                habText.style.color = 'var(--apple-red)';
+                habReasons.innerHTML = habitability.reasons.map(reason => `<span>• ${reason}</span>`).join('<br>');
             } else {
-                resultText.textContent = 'Classification: False Positive';
-                resultText.style.color = 'var(--apple-red)';
-                resultDesc.textContent = 'Model suggests signal characteristics of stellar contamination or other phenomena.';
-                //resultText.textContent = 'Analysis Error';
-                //resultText.style.color = 'var(--apple-yellow)';
-                //resultDesc.textContent = 'Could not connect to the AI model. Ensure the local server is running.';
+                resultText.style.color = 'var(--apple-yellow)';
+                resultDesc.textContent = 'Could not connect to the AI model. Ensure the local server is running.';
             }
         }, 500);
     }

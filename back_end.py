@@ -117,4 +117,4 @@ def predict():
 if __name__ == '__main__':
     # This will start a local development server on port 5000
     # The 'debug=True' flag allows the server to auto-reload when you save changes
-    app.run(debug=True, port=5000)
+    app.run(debug=True, port=5000)  
