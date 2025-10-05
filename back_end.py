@@ -70,7 +70,7 @@ print("Training RandomForest model...")
 # Initialize and train the model on the full, prepared dataset
 model = RandomForestClassifier(n_estimators=100, n_jobs=-1, random_state=42, class_weight='balanced')
 model.fit(X_train_scaled, y_train)
-print("✅ Model trained and ready to accept requests!")
+print("Model trained and ready to accept requests!")
 
 
 # --- 2. Define API Endpoints ---
