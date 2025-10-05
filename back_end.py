@@ -20,7 +20,7 @@ print("=" * 70)
 
 # --- Step 1: Load Fused Training Data ---
 FUSED_FILE = './fused_kepler_k2_data.csv'
-TESS_FILE = '/home/rodrigo/Desktop/nasa/Entropy-Machine-Coders/raw_data/TOI_2025.10.04_08.55.28.csv'
+TESS_FILE = './raw_data/TOI_2025.10.04_08.55.28.csv'
 
 print("\n--- Loading Training Data ---")
 try:
