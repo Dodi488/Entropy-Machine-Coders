@@ -100,7 +100,7 @@ python back_end.py
 **Response (JSON)**
 
 ```json
-{ "prediction": "PLANET" }   // or "FALSE POSITIVE"
+{ "prediction": "CONFIRMED" }   // or "CANDIDATE"
 ```
 
 **Feature order is important**:  
