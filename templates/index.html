@@ -619,11 +619,11 @@
             document.getElementById('loader-container').classList.add('hidden');
             document.getElementById('result-display').classList.remove('hidden');
             
-            if (prediction === 'PLANET') {
+            if (prediction === 'CONFIRMED') {
                 document.getElementById('result-text').textContent = 'Confirmed: Exoplanet Candidate';
                 document.getElementById('result-text').style.color = 'var(--apple-green)';
                 document.getElementById('result-description').textContent = 'Model indicates transit signature is consistent with a planetary body.';
-            } else if (prediction === 'FALSE POSITIVE') {
+            } else if (prediction === 'CANDIDATE') {
                 document.getElementById('result-text').textContent = 'Classification: False Positive';
                 document.getElementById('result-text').style.color = 'var(--apple-red)';
                 document.getElementById('result-description').textContent = 'Model suggests signal characteristics of stellar contamination.';
